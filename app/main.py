@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import settings
 from app.db.session import get_db, engine
 from app.db.models import Base, User, Subscription
-from app.api import auth, subscriptions
+from app.api import auth, subscriptions, content_preview
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
 from app.core.security import get_current_user_optional, authenticate_user, create_access_token
 
@@ -144,6 +144,12 @@ app.include_router(
     subscriptions.router,
     prefix=f"{settings.API_V1_STR}/subscriptions",
     tags=["subscriptions"],
+)
+
+app.include_router(
+    content_preview.router,
+    prefix=f"{settings.API_V1_STR}/preview",
+    tags=["preview"],
 )
 
 

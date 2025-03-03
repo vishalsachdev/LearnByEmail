@@ -114,6 +114,21 @@
                         <div class="col-12 col-sm-6 col-md-3 mb-4">
                             <label for="topic" class="form-label">Topic</label>
                             <input type="text" class="form-control" id="topic" name="topic" placeholder="e.g., Python, History, Physics" required>
+                            <button type="button" id="preview-button" class="btn btn-outline-info mt-2 w-100">
+                                <i class="fas fa-eye me-1"></i> See Example Content
+                            </button>
+                            <div id="difficulty-wrapper" class="d-none mt-2">
+                                <div class="d-flex">
+                                    <select id="preview-difficulty" class="form-select me-2">
+                                        <option value="easy">Beginner</option>
+                                        <option value="medium" selected>Intermediate</option>
+                                        <option value="hard">Advanced</option>
+                                    </select>
+                                    <button id="refresh-preview" type="button" class="btn btn-outline-secondary">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-12 col-sm-6 col-md-3 mb-4">
                             <label for="preferred_time" class="form-label">Preferred Time</label>
@@ -135,6 +150,10 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Content Preview Container -->
+                    <div id="preview-container" class="mt-4 mb-4 d-none"></div>
+                    
                     <div class="d-grid d-md-block">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="fas fa-plus"></i> Add Subscription
@@ -151,4 +170,5 @@
 <script src="{{ url_for('static', filename='js/validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/additional_timezones.js') }}"></script>
 <script src="{{ url_for('static', filename='js/timezone_detector.js') }}"></script>
+<script src="{{ url_for('static', filename='js/content_preview.js') }}"></script>
 {% endblock %}

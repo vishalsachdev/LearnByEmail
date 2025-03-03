@@ -86,13 +86,16 @@ async def setup_gemini():
         raise
 
 
-async def generate_educational_content(topic: str, previous_contents: Optional[List[str]] = None):
+async def generate_educational_content(topic: str, previous_contents: Optional[List[str]] = None, 
+                              is_preview: bool = False, difficulty: str = "medium"):
     """
     Generate educational content about a topic
     
     Args:
         topic: The topic to generate content about
         previous_contents: Optional list of previous email contents
+        is_preview: Whether this is a preview (shorter content)
+        difficulty: Content difficulty level (easy, medium, hard)
         
     Returns:
         HTML formatted educational content or None on error
@@ -115,16 +118,42 @@ async def generate_educational_content(topic: str, previous_contents: Optional[L
         
         # Process previous content if available
         history_context = ""
-        if previous_contents:
+        if previous_contents and not is_preview:
             if isinstance(previous_contents, list) and all(isinstance(item, str) for item in previous_contents):
                 history_context = "Previous lessons covered:\n" + "\n".join(previous_contents[-3:])  # Last 3 emails
             else:
                 logger.warning("Invalid previous_contents format provided")
                 history_context = ""
 
-        # Create prompt
-        prompt = f"""Create an educational email about {sanitized_topic}. 
+        # Adjust content length based on preview mode
+        length_instruction = "concise and brief" if is_preview else "concise but informative"
+        
+        # Adjust difficulty level
+        difficulty_instruction = ""
+        if difficulty == "easy":
+            difficulty_instruction = "Use simple language and basic concepts. Explain as if to a beginner."
+        elif difficulty == "hard":
+            difficulty_instruction = "Use advanced concepts and terminology appropriate for someone familiar with the subject."
+        else:  # medium
+            difficulty_instruction = "Use moderately technical language appropriate for an interested learner."
+        
+        # Create appropriate prompt based on mode
+        if is_preview:
+            prompt = f"""Create a SHORT educational content preview about {sanitized_topic}. 
+This is a PREVIEW to show users what kind of content they will receive.
+{difficulty_instruction}
+Structure the response exactly as follows:
+
+1. Start with "**Subject: [Topic-specific engaging title]**"
+2. Begin with a brief interesting fact starting with "Did you know..."
+3. Follow with a very concise explanation titled "Here's why this matters:"
+4. End with a brief thought-provoking question titled "Question for Reflection:"
+
+Keep the language friendly and engaging. This is a PREVIEW so keep it brief (about 30-40% the length of a full lesson)."""
+        else:
+            prompt = f"""Create an educational email about {sanitized_topic}. 
 {history_context}
+{difficulty_instruction}
 Please create new content that builds upon previous lessons if available.
 Structure the response exactly as follows:
 
@@ -134,7 +163,7 @@ Structure the response exactly as follows:
 4. Include a practical example or application titled "Let's see it in action:"
 5. End with a thought-provoking question titled "Question for Reflection:"
 
-Keep the language friendly and engaging, and ensure each section is concise but informative."""
+Keep the language friendly and engaging, and ensure each section is {length_instruction}."""
 
         # Generate content
         logger.debug(f"Sending prompt to Gemini API for sanitized topic: {sanitized_topic}")
@@ -145,17 +174,36 @@ Keep the language friendly and engaging, and ensure each section is concise but 
         # Format the content with HTML
         # First remove any remaining ** marks
         content = content.replace("**", "")
-        formatted_content = content.replace(
-            "Subject:", "<h2 style='color: #2c3e50; margin-bottom: 20px;'>").replace(
-            "\n", "</h2>", 1).replace(
-            "Did you know", "<p><strong>Did you know</strong>").replace(
-            "Here's why this matters:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Understanding the Concept:</h3><p>").replace(
-            "Let's see it in action:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Practical Application:</h3><p>").replace(
-            "Question for Reflection:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Think About This:</h3><p>")
+        
+        # Create different formatting for preview vs full content
+        if is_preview:
+            # Preview formatting (simpler, more compact)
+            formatted_content = content.replace(
+                "Subject:", "<h2 style='color: #2c3e50; margin-bottom: 15px;'>").replace(
+                "\n", "</h2>", 1).replace(
+                "Did you know", "<p><strong>Did you know</strong>").replace(
+                "Here's why this matters:", "</p><h3 style='color: #34495e; margin-top: 15px;'>Why This Matters:</h3><p>").replace(
+                "Question for Reflection:", "</p><h3 style='color: #34495e; margin-top: 15px;'>Think About This:</h3><p>")
+            
+            # Add preview badge
+            formatted_content = f"<div class='preview-badge' style='background: #f0f8ff; border: 1px solid #b3d7ff; color: #0056b3; padding: 5px 10px; display: inline-block; margin-bottom: 15px; border-radius: 4px; font-size: 0.8rem;'>Content Preview ({difficulty} level)</div>" + formatted_content
+        else:
+            # Full content formatting
+            formatted_content = content.replace(
+                "Subject:", "<h2 style='color: #2c3e50; margin-bottom: 20px;'>").replace(
+                "\n", "</h2>", 1).replace(
+                "Did you know", "<p><strong>Did you know</strong>").replace(
+                "Here's why this matters:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Understanding the Concept:</h3><p>").replace(
+                "Let's see it in action:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Practical Application:</h3><p>").replace(
+                "Question for Reflection:", "</p><h3 style='color: #34495e; margin-top: 20px;'>Think About This:</h3><p>")
 
         # Ensure the content ends with a closing paragraph tag
         if not formatted_content.endswith("</p>"):
             formatted_content += "</p>"
+            
+        # Add a disclaimer for preview content
+        if is_preview:
+            formatted_content += "<div style='border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; font-style: italic; font-size: 0.9rem; color: #777;'>This is a preview of the type of content you'll receive. Actual lessons will be more detailed and include practical examples.</div>"
 
         return formatted_content
     except Exception as e:
