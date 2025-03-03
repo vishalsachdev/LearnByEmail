@@ -143,14 +143,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show loading state
         previewContainer.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3">Generating content preview for "${topic}"...</p>
+            <div style="text-align: center; padding: 30px 0;">
+                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #4a6baf; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="margin-top: 15px;">Generating content preview for "${topic}"...</p>
             </div>
         `;
-        previewContainer.classList.remove('d-none');
+        previewContainer.style.display = 'block';
+        
+        // Add spin animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
         
         previewLoading = true;
         
@@ -188,29 +196,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show the preview
             previewContainer.innerHTML = `
-                <div class="preview-header d-flex justify-content-between align-items-center mb-3">
-                    <h3>Content Preview</h3>
-                    <button id="close-preview" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-times"></i>
+                <div class="preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Content Preview</h3>
+                    <button id="close-preview" style="background: none; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; cursor: pointer;">
+                        ✕
                     </button>
                 </div>
-                <div class="preview-content">
+                <div class="preview-content" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
                     ${content}
                 </div>
-                <div class="mt-3 text-center">
-                    <button id="close-preview" class="btn btn-primary">
-                        <i class="fas fa-check me-1"></i> Got it, continue subscription
+                <div style="margin-top: 15px; text-align: center;">
+                    <button id="close-preview" style="background-color: #4a6baf; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold;">
+                        Got it, continue subscription
                     </button>
                 </div>
             `;
+            
+            // Ensure container is visible
+            previewContainer.style.display = 'block';
         } catch (error) {
             previewContainer.innerHTML = `
-                <div class="alert alert-danger">
-                    <p><strong>Error generating preview</strong></p>
+                <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb;">
+                    <p style="font-weight: bold; margin-top: 0;">Error generating preview</p>
                     <p>${error.message || 'Something went wrong. Please try again later.'}</p>
-                    <button id="close-preview" class="btn btn-sm btn-outline-danger mt-2">Close</button>
+                    <button id="close-preview" style="background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; margin-top: 10px;">Close</button>
                 </div>
             `;
+            
+            // Ensure container is visible
+            previewContainer.style.display = 'block';
         } finally {
             previewLoading = false;
             
@@ -221,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Close preview
     function closePreview() {
-        previewContainer.classList.add('d-none');
+        previewContainer.style.display = 'none';
         previewContainer.innerHTML = '';
     }
     
