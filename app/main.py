@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, Response, Form, Cookie, HTTPException, status
+from fastapi import FastAPI, Depends, Request, Response, Form, Cookie, HTTPException, status, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 import logging
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, timedelta
+import asyncio
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
@@ -179,6 +180,7 @@ async def home(
 @app.post("/subscribe", response_class=HTMLResponse)
 async def subscribe(
     request: Request,
+    background_tasks: BackgroundTasks,
     email: str = Form(...),
     topic: str = Form(...),
     preferred_time: str = Form(...),
@@ -262,7 +264,9 @@ async def subscribe(
     # Send an immediate first email
     from app.services.email_sender import send_educational_email_task
     try:
-        asyncio.create_task(send_educational_email_task(subscription.id))
+        # Use background_tasks to handle the asyncio coroutine properly
+        background_tasks = BackgroundTasks()
+        background_tasks.add_task(send_educational_email_task, subscription.id)
         logger.info(f"Scheduled immediate welcome email for new subscription {subscription.id} to {email}")
     except Exception as e:
         logger.error(f"Error scheduling welcome email: {str(e)}")
@@ -554,6 +558,7 @@ async def delete_subscription(
 async def test_email(
     subscription_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
@@ -582,12 +587,9 @@ async def test_email(
         logger.info(f"Using configuration: SENDGRID_API_KEY set: {'Yes' if settings.SENDGRID_API_KEY else 'No'}")
         logger.info(f"Using configuration: GEMINI_API_KEY set: {'Yes' if settings.GEMINI_API_KEY else 'No'}")
         
-        result = await send_educational_email_task(subscription.id)
-        
-        if result:
-            flash(request, "Test email sent successfully!", "success")
-        else:
-            flash(request, "Failed to send test email. Check server logs for details.", "danger")
+        # Use background tasks to properly handle the async operation
+        background_tasks.add_task(send_educational_email_task, subscription.id)
+        flash(request, "Test email sending initiated. Check your inbox shortly!", "success")
     except Exception as e:
         logger.error(f"Error in test email route: {type(e).__name__}: {str(e)}")
         flash(request, f"Error: {str(e)}", "danger")

@@ -62,10 +62,21 @@ def add_email_job(subscription: Subscription):
     # Remove existing job if it exists
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
+        
+    # Create a wrapper function that will properly call the async function
+    def send_email_wrapper(subscription_id):
+        """Wrapper to handle the async function in the scheduler"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(send_educational_email(subscription_id))
+            return result
+        finally:
+            loop.close()
     
     # Add new job
     scheduler.add_job(
-        func=send_educational_email,
+        func=send_email_wrapper,
         trigger='cron',
         hour=subscription.preferred_time.hour,
         minute=subscription.preferred_time.minute,
