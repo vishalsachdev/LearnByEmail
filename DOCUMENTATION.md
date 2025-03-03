@@ -49,7 +49,6 @@ app/
 ### Email Delivery
 
 - Primary: SendGrid API integration
-- Fallback: SMTP via Gmail
 - HTML-formatted educational emails
 - Email history tracking
 
@@ -87,9 +86,7 @@ GEMINI_API_KEY=your-gemini-api-key
 SENDGRID_API_KEY=your-sendgrid-api-key
 SENDGRID_FROM_EMAIL=your-verified-sender@example.com
 
-# Option 2: Gmail SMTP
-GMAIL_USERNAME=your-gmail-username
-GMAIL_APP_PASSWORD=your-gmail-app-password
+
 ```
 
 ## API Endpoints
@@ -248,7 +245,6 @@ The content generator will use the first available model that works with your AP
 1. **Email Delivery Failing**
    - Check SendGrid API key validity
    - Verify sender email is authorized in SendGrid
-   - Check SMTP credentials if using Gmail
    - Look for rate limiting or account restrictions
 
 2. **Content Generation Errors**
