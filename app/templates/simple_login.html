@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - LearningPulse</title>
+</head>
+<body>
+    <h1>Login to LearningPulse</h1>
+    
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div style="color: {% if category == 'danger' %}red{% elif category == 'success' %}green{% else %}blue{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+    
+    <form action="/login" method="post">
+        <div>
+            <label for="email">Email address:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+    
+    <p><a href="/">Back to Home</a> | <a href="/register">Register</a></p>
+</body>
+</html>

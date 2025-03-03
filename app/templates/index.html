@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}LearningPulse - Daily Educational Content{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Learn Something New Every Day</h2>
+                <p class="card-text">
+                    LearningPulse delivers daily educational content straight to your inbox.
+                    Choose a topic you're interested in, and we'll send you bite-sized lessons to help you learn and grow.
+                </p>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><i class="fas fa-check text-success"></i> AI-generated educational content</li>
+                    <li class="list-group-item"><i class="fas fa-check text-success"></i> Delivered at your preferred time</li>
+                    <li class="list-group-item"><i class="fas fa-check text-success"></i> Topics customized to your interests</li>
+                    <li class="list-group-item"><i class="fas fa-check text-success"></i> Easy to understand and apply</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Subscribe Now</h2>
+                <p class="card-text">Fill out the form below to start receiving daily educational content:</p>
+                
+                <form action="{{ url_for('subscribe') }}" method="post">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" required 
+                               {% if current_user %}value="{{ current_user.email }}" readonly{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label for="topic" class="form-label">Topic</label>
+                        <input type="text" class="form-control" id="topic" name="topic" 
+                               placeholder="e.g., Python, History, Physics, Art" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="preferred_time" class="form-label">Preferred Time (24-hour format)</label>
+                        <input type="time" class="form-control" id="preferred_time" name="preferred_time" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone" name="timezone" required>
+                            <option value="America/New_York">Eastern Time (ET)</option>
+                            <option value="America/Chicago">Central Time (CT)</option>
+                            <option value="America/Denver">Mountain Time (MT)</option>
+                            <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                            <option value="America/Anchorage">Alaska Time (AKT)</option>
+                            <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                            <option value="Europe/London">GMT/UTC</option>
+                            <option value="Europe/Paris">Central European Time (CET)</option>
+                            <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
+                            <option value="Australia/Sydney">Australian Eastern Time (AET)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center">How It Works</h2>
+                <div class="row mt-4">
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-user-plus fa-3x mb-3 text-primary"></i>
+                        <h4>1. Subscribe</h4>
+                        <p>Choose a topic you're interested in learning about and your preferred delivery time.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-robot fa-3x mb-3 text-primary"></i>
+                        <h4>2. We Generate Content</h4>
+                        <p>Our AI creates personalized, educational content about your chosen topic.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-envelope fa-3x mb-3 text-primary"></i>
+                        <h4>3. Daily Delivery</h4>
+                        <p>Receive your educational content via email at your preferred time, every day.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

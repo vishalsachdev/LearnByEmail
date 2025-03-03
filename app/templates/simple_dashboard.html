@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - LearningPulse</title>
+</head>
+<body>
+    <h1>LearningPulse Dashboard</h1>
+    
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div style="color: {% if category == 'danger' %}red{% elif category == 'success' %}green{% else %}blue{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+    
+    {% if current_user %}
+        <h2>Welcome, {{ current_user.email }}!</h2>
+        
+        <h3>Your Subscriptions</h3>
+        {% if subscriptions %}
+            <ul>
+                {% for subscription in subscriptions %}
+                    <li>
+                        <strong>{{ subscription.topic }}</strong> - 
+                        Delivered at {{ subscription.preferred_time.strftime('%H:%M') }} 
+                        {{ subscription.timezone }}
+                        <a href="/test-email/{{ subscription.id }}" class="button">Test Send Email Now</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You don't have any subscriptions yet.</p>
+        {% endif %}
+        
+        <h3>Add New Subscription</h3>
+        <form action="/subscribe" method="post">
+            <input type="hidden" name="email" value="{{ current_user.email }}">
+            
+            <div>
+                <label for="topic">Topic:</label>
+                <input type="text" id="topic" name="topic" required>
+            </div>
+            <div>
+                <label for="preferred_time">Preferred Time (24-hour format):</label>
+                <input type="time" id="preferred_time" name="preferred_time" required>
+            </div>
+            <div>
+                <label for="timezone">Timezone:</label>
+                <select id="timezone" name="timezone" required>
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit">Add Subscription</button>
+            </div>
+        </form>
+        
+        <p><a href="/logout">Logout</a></p>
+    {% else %}
+        <p>You are not logged in. <a href="/login">Login</a> to view your dashboard.</p>
+    {% endif %}
+    
+    <p><a href="/">Back to Home</a></p>
+</body>
+</html>
