@@ -155,16 +155,29 @@ document.addEventListener('DOMContentLoaded', function() {
         previewLoading = true;
         
         try {
+            // Get auth token from cookie
+            const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+            const token = cookies['access_token'];
+            
+            console.log('Using token for preview request:', token ? 'Token found' : 'No token found');
+            
             // Call the API
             const response = await fetch('/api/v1/preview/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    'X-CSRF-Token': 'preview-token' // Add CSRF protection if needed
                 },
                 body: JSON.stringify({
                     topic: topic,
                     difficulty: difficulty
-                })
+                }),
+                credentials: 'include' // Include cookies in the request
             });
             
             if (!response.ok) {

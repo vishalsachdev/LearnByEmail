@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user_optional
 from app.db.session import get_db
 from app.db.models import User
 from app.services.content_generator import generate_educational_content
@@ -21,7 +21,7 @@ class ContentPreviewRequest(BaseModel):
 async def generate_content_preview(
     request: ContentPreviewRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Generate a preview of educational content for a specific topic
