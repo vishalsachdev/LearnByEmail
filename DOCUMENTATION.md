@@ -49,8 +49,11 @@ app/
 ### Email Delivery
 
 - Primary: SendGrid API integration
+- Fallback: SMTP via Gmail
 - HTML-formatted educational emails
 - Email history tracking
+- Test email functionality
+- Background task processing for non-blocking operation
 
 ### Scheduling
 
@@ -68,6 +71,10 @@ app/
 - Dashboard with subscription management
 - Clean, card-based layout for better organization
 - Visual feedback for user actions
+- Content preview feature with difficulty selection
+- Mobile-optimized layouts with touch-friendly controls
+- Automatic timezone detection from browser settings
+- Accessibility considerations for all users
 
 ## Environment Configuration
 
@@ -82,12 +89,16 @@ DATABASE_URL=sqlite:///./learningpulse.db
 GEMINI_API_KEY=your-gemini-api-key
 
 # Email sending (choose one method)
-# Option 1: SendGrid
+# Option 1: SendGrid (recommended)
 SENDGRID_API_KEY=your-sendgrid-api-key
 SENDGRID_FROM_EMAIL=your-verified-sender@example.com
 
-
+# Option 2: Gmail SMTP
+GMAIL_USERNAME=your-gmail-username@gmail.com
+GMAIL_APP_PASSWORD=your-app-specific-password
 ```
+
+> **Note**: For email delivery to work, you must configure either SendGrid (recommended) or Gmail SMTP. Without these settings, the application will generate content but won't be able to deliver emails.
 
 ## API Endpoints
 
@@ -106,6 +117,11 @@ SENDGRID_FROM_EMAIL=your-verified-sender@example.com
 - `DELETE /api/v1/subscriptions/{id}`: Delete a subscription
 - `GET /api/v1/subscriptions/{id}/history`: Get email history
 
+### Content Preview
+
+- `POST /api/v1/preview/generate`: Generate a content preview for a topic
+  - Parameters: `topic` (required), `difficulty` (optional: easy, medium, hard)
+
 ### Web UI Routes
 
 - `GET /`: Home page
@@ -116,6 +132,8 @@ SENDGRID_FROM_EMAIL=your-verified-sender@example.com
 - `GET /dashboard`: User dashboard
 - `POST /subscribe`: Create subscription from form
 - `GET /test-email/{id}`: Test send an email immediately
+- `GET /check-env`: Display current environment configuration (debugging)
+- `GET /direct-test-email/{email}`: Send a direct test email (debugging)
 
 ## Database Schema
 
