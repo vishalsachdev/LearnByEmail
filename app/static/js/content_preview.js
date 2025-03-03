@@ -6,29 +6,58 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Content preview script loaded');
+    
     // Cache DOM elements
     const topicInput = document.getElementById('topic');
+    console.log('Topic input found:', topicInput);
+    
     const previewButton = document.getElementById('preview-button');
+    console.log('Preview button found:', previewButton);
+    
     const previewContainer = document.getElementById('preview-container');
+    console.log('Preview container found:', previewContainer);
+    
     const difficultySelect = document.getElementById('preview-difficulty');
+    console.log('Difficulty select found:', difficultySelect);
+    
     const closePreviewButton = document.getElementById('close-preview');
     let previewLoading = false;
     
-    // Only initialize if we have the necessary elements
-    if (!topicInput || !previewContainer) return;
+    // Only initialize if we have the necessary element - topic input is required
+    if (!topicInput) {
+        console.error('Topic input not found');
+        return;
+    }
     
-    // Create preview button if it doesn't exist
-    if (!previewButton) {
-        const topicGroup = topicInput.closest('.col-12');
-        if (!topicGroup) return;
+    // If no preview container exists, create one
+    if (!previewContainer) {
+        // Find the form element
+        const form = document.querySelector('form');
+        if (!form) {
+            console.error('Form not found');
+            return;
+        }
         
-        // Create and append preview button
-        const previewBtn = document.createElement('button');
-        previewBtn.type = 'button';
-        previewBtn.id = 'preview-button';
-        previewBtn.className = 'btn btn-outline-info mt-2 w-100';
-        previewBtn.innerHTML = '<i class="fas fa-eye me-1"></i> See Example Content';
-        topicGroup.appendChild(previewBtn);
+        // Create preview container
+        previewContainer = document.createElement('div');
+        previewContainer.id = 'preview-container';
+        previewContainer.style.margin = '20px 0';
+        previewContainer.style.display = 'none';
+        
+        // Insert after topic or before preferred time
+        const preferredTimeGroup = document.querySelector('.form-group:nth-of-type(2)');
+        if (preferredTimeGroup) {
+            form.insertBefore(previewContainer, preferredTimeGroup);
+        } else {
+            form.appendChild(previewContainer);
+        }
+    }
+    
+    // Ensure we have a preview button
+    if (!previewButton) {
+        console.log('Creating preview button');
+        previewButton = document.getElementById('preview-button');
     }
     
     // Create difficulty select if it doesn't exist
