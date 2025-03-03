@@ -2,51 +2,64 @@
 
 {% block title %}Edit Subscription - LearningPulse{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/additional_timezones.js') }}"></script>
+<script src="{{ url_for('static', filename='js/timezone_detector.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center mt-5">
-    <div class="col-lg-6 col-md-8">
+    <div class="col-12 col-lg-8 col-xl-6">
         <div class="card">
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">Edit Subscription</h2>
                 
                 <form action="{{ url_for('edit_subscription_submit', subscription_id=subscription.id) }}" method="post">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="email" class="form-label">Email address</label>
                         <input type="email" class="form-control" id="email" value="{{ subscription.email }}" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="topic" class="form-label">Topic</label>
                         <input type="text" class="form-control" id="topic" name="topic" value="{{ subscription.topic }}" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="preferred_time" class="form-label">Preferred Time (24-hour format)</label>
-                        <input type="time" class="form-control" id="preferred_time" name="preferred_time" value="{{ subscription.preferred_time.strftime('%H:%M') }}" required>
+                    
+                    <div class="row">
+                        <div class="col-12 col-sm-6 mb-4">
+                            <label for="preferred_time" class="form-label">Preferred Time (24-hour format)</label>
+                            <input type="time" class="form-control" id="preferred_time" name="preferred_time" value="{{ subscription.preferred_time.strftime('%H:%M') }}" required>
+                        </div>
+                        <div class="col-12 col-sm-6 mb-4">
+                            <label for="timezone" class="form-label">Timezone</label>
+                            <select class="form-select" id="timezone" name="timezone" required>
+                                <option value="America/New_York" {% if subscription.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time (ET)</option>
+                                <option value="America/Chicago" {% if subscription.timezone == 'America/Chicago' %}selected{% endif %}>Central Time (CT)</option>
+                                <option value="America/Denver" {% if subscription.timezone == 'America/Denver' %}selected{% endif %}>Mountain Time (MT)</option>
+                                <option value="America/Los_Angeles" {% if subscription.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (PT)</option>
+                                <option value="America/Anchorage" {% if subscription.timezone == 'America/Anchorage' %}selected{% endif %}>Alaska Time (AKT)</option>
+                                <option value="Pacific/Honolulu" {% if subscription.timezone == 'Pacific/Honolulu' %}selected{% endif %}>Hawaii Time (HT)</option>
+                                <option value="Europe/London" {% if subscription.timezone == 'Europe/London' %}selected{% endif %}>GMT/UTC</option>
+                                <option value="Europe/Paris" {% if subscription.timezone == 'Europe/Paris' %}selected{% endif %}>Central European Time (CET)</option>
+                                <option value="Asia/Tokyo" {% if subscription.timezone == 'Asia/Tokyo' %}selected{% endif %}>Japan Standard Time (JST)</option>
+                                <option value="Australia/Sydney" {% if subscription.timezone == 'Australia/Sydney' %}selected{% endif %}>Australian Eastern Time (AET)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="timezone" class="form-label">Timezone</label>
-                        <select class="form-select" id="timezone" name="timezone" required>
-                            <option value="America/New_York" {% if subscription.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time (ET)</option>
-                            <option value="America/Chicago" {% if subscription.timezone == 'America/Chicago' %}selected{% endif %}>Central Time (CT)</option>
-                            <option value="America/Denver" {% if subscription.timezone == 'America/Denver' %}selected{% endif %}>Mountain Time (MT)</option>
-                            <option value="America/Los_Angeles" {% if subscription.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (PT)</option>
-                            <option value="America/Anchorage" {% if subscription.timezone == 'America/Anchorage' %}selected{% endif %}>Alaska Time (AKT)</option>
-                            <option value="Pacific/Honolulu" {% if subscription.timezone == 'Pacific/Honolulu' %}selected{% endif %}>Hawaii Time (HT)</option>
-                            <option value="Europe/London" {% if subscription.timezone == 'Europe/London' %}selected{% endif %}>GMT/UTC</option>
-                            <option value="Europe/Paris" {% if subscription.timezone == 'Europe/Paris' %}selected{% endif %}>Central European Time (CET)</option>
-                            <option value="Asia/Tokyo" {% if subscription.timezone == 'Asia/Tokyo' %}selected{% endif %}>Japan Standard Time (JST)</option>
-                            <option value="Australia/Sydney" {% if subscription.timezone == 'Australia/Sydney' %}selected{% endif %}>Australian Eastern Time (AET)</option>
-                        </select>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                    
+                    <div class="d-grid gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </a>
                     </div>
                 </form>
                 
-                <div class="mt-4">
+                <div class="mt-5 pt-3 border-top">
                     <form action="{{ url_for('delete_subscription', subscription_id=subscription.id) }}" method="post">
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this subscription?')">
+                            <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to delete this subscription?')">
                                 <i class="fas fa-trash"></i> Delete Subscription
                             </button>
                         </div>
