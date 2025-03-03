@@ -25,21 +25,31 @@ logger = logging.getLogger(__name__)
 
 
 async def check_email_credentials():
-    """Check if SMTP credentials are properly configured"""
+    """Check if email credentials are properly configured"""
+    # First check if SendGrid is configured
+    sendgrid_key = settings.SENDGRID_API_KEY
+    if sendgrid_key:
+        logger.info(f"SendGrid API key is set (length: {len(sendgrid_key)})")
+        return settings.SENDGRID_FROM_EMAIL, "sendgrid"
+        
+    # Fall back to SMTP
     username = settings.GMAIL_USERNAME
     password = settings.GMAIL_APP_PASSWORD
+    
     if not username or not password:
-        raise ValueError(
-            "Email credentials not properly configured. Please set GMAIL_USERNAME and GMAIL_APP_PASSWORD"
-        )
+        logger.error("No email credentials configured. Please set either SENDGRID_API_KEY or GMAIL_USERNAME+GMAIL_APP_PASSWORD")
+        # Return default values to prevent errors, but emails won't be sent
+        return "noreply@example.com", None
+        
+    logger.info(f"Using GMAIL credentials for {username}")
     return username, password
 
 
 async def create_html_email(subject, content, to_email):
     """Create HTML email message"""
-    username, _ = await check_email_credentials()
+    from_email, _ = await check_email_credentials()
     msg = MIMEMultipart()
-    msg['From'] = username
+    msg['From'] = from_email
     msg['Subject'] = subject
     msg['To'] = to_email
 
@@ -83,6 +93,7 @@ async def send_via_sendgrid(to_email, subject, html_content):
         from_email = settings.SENDGRID_FROM_EMAIL
         logger.info(f"Attempting to send email via SendGrid from {from_email} to {to_email}")
         logger.info(f"Subject: {subject}")
+        logger.info(f"SendGrid API Key length: {len(sendgrid_key) if sendgrid_key else 0}")
         
         message = Mail(
             from_email=from_email,
@@ -124,13 +135,20 @@ async def send_via_smtp(to_email, subject, html_content):
     try:
         username, password = await check_email_credentials()
         
+        # If no valid credentials, log error and return
+        if password is None:
+            logger.error("No valid SMTP credentials available")
+            return False
+            
         msg = await create_html_email(subject, html_content, to_email)
 
+        logger.info(f"Attempting to send email via SMTP to {to_email}")
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(username, password)
             server.send_message(msg)
-        
+            
+        logger.info(f"Successfully sent email via SMTP to {to_email}")
         return True
     except Exception as e:
         logger.error(f"SMTP Error: {type(e).__name__}: {str(e)}")
@@ -179,22 +197,43 @@ async def send_educational_email_task(subscription_id: int):
         </div>
         """
         
+        # Check which email provider is available
+        email_provider_available = False
+        
         # Try SendGrid first
         sent = False
         if SENDGRID_AVAILABLE and settings.SENDGRID_API_KEY:
+            email_provider_available = True
+            logger.info(f"Attempting to send email via SendGrid to {subscription.email}")
             sent = await send_via_sendgrid(
                 subscription.email,
                 f"Your Daily {subscription.topic} Lesson",
                 html_content
             )
+            
+            if sent:
+                logger.info(f"Successfully sent email via SendGrid to {subscription.email}")
+            else:
+                logger.error(f"SendGrid email sending failed for {subscription.email}")
         
-        # Fall back to SMTP if SendGrid failed
+        # Fall back to SMTP if SendGrid failed or not available
         if not sent:
-            sent = await send_via_smtp(
-                subscription.email,
-                f"Your Daily {subscription.topic} Lesson",
-                html_content
-            )
+            if settings.GMAIL_USERNAME and settings.GMAIL_APP_PASSWORD:
+                email_provider_available = True
+                logger.info(f"Attempting to send email via SMTP to {subscription.email}")
+                sent = await send_via_smtp(
+                    subscription.email,
+                    f"Your Daily {subscription.topic} Lesson",
+                    html_content
+                )
+                
+                if sent:
+                    logger.info(f"Successfully sent email via SMTP to {subscription.email}")
+                else:
+                    logger.error(f"SMTP email sending failed for {subscription.email}")
+                    
+        if not email_provider_available:
+            logger.error("No email provider credentials configured. Cannot send emails.")
         
         if sent:
             # Save the email content to history

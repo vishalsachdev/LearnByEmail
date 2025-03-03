@@ -597,6 +597,67 @@ async def test_email(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
+# Check environment variables
+@app.get("/check-env")
+async def check_env():
+    """Check environment variables"""
+    try:
+        from app.core.config import settings
+        import os
+        
+        env_vars = {
+            "SENDGRID_API_KEY": f"{'Set' if settings.SENDGRID_API_KEY else 'Not Set'} (Length: {len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0})",
+            "SENDGRID_FROM_EMAIL": settings.SENDGRID_FROM_EMAIL,
+            "GEMINI_API_KEY": f"{'Set' if settings.GEMINI_API_KEY else 'Not Set'} (Length: {len(settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY else 0})",
+            "DATABASE_URL": settings.DATABASE_URL
+        }
+        
+        html = "<h1>Environment Variables</h1><ul>"
+        for key, value in env_vars.items():
+            html += f"<li><strong>{key}:</strong> {value}</li>"
+        html += "</ul>"
+        
+        return HTMLResponse(html)
+    except Exception as e:
+        return HTMLResponse(f"<h1>Error checking environment</h1><p>{str(e)}</p>")
+
+
+# Direct email test route
+@app.get("/direct-test-email/{email}")
+async def direct_test_email(
+    email: str,
+    request: Request
+):
+    """Test route to directly attempt a test email"""
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, Content
+        from app.core.config import settings
+        
+        # Log settings
+        logger.info(f"Using SendGrid key with length: {len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0}")
+        logger.info(f"From email: {settings.SENDGRID_FROM_EMAIL}")
+        
+        # Try to create and send a simple message
+        message = Mail(
+            from_email=settings.SENDGRID_FROM_EMAIL,
+            to_emails=email,
+            subject="LearningPulse Test Email",
+            html_content="<p>This is a test email from LearningPulse to verify email sending.</p>"
+        )
+        
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        response = sg.send(message)
+        
+        status_code = response.status_code
+        logger.info(f"SendGrid direct test response: Status {status_code}")
+        
+        return HTMLResponse(f"<h1>Test email sent to {email}</h1><p>Status code: {status_code}</p>")
+    except Exception as e:
+        logger.error(f"Direct test email error: {type(e).__name__}: {str(e)}")
+        return HTMLResponse(f"<h1>Error sending test email</h1><p>Error: {str(e)}</p>")
+
+
 # Startup and shutdown events
 @app.on_event("startup")
 async def startup_event():

@@ -9,21 +9,21 @@ import asyncio
 from app.core.config import settings
 from app.db.models import Subscription
 
-# Create global scheduler
+# Create global scheduler - use simpler setup
 jobstores = {
-    'default': SQLAlchemyJobStore(url=settings.DATABASE_URL)
+    'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')
 }
 executors = {
-    'default': ThreadPoolExecutor(20),
-    'processpool': ProcessPoolExecutor(5)
+    'default': ThreadPoolExecutor(20)
 }
 job_defaults = {
     'coalesce': True,
-    'max_instances': 1
+    'max_instances': 1,
+    'misfire_grace_time': 3600  # Allow misfired jobs up to 1 hour late
 }
 
+# Use MemoryJobStore for development to avoid serialization issues
 scheduler = AsyncIOScheduler(
-    jobstores=jobstores,
     executors=executors,
     job_defaults=job_defaults,
     timezone=pytz.UTC
@@ -55,6 +55,33 @@ async def send_educational_email(subscription_id: int):
     logger.info(f"Email send task for subscription {subscription_id} completed with result: {result}")
 
 
+# Create a top-level wrapper function that can be properly serialized
+def send_email_wrapper(subscription_id):
+    """Wrapper to handle the async function in the scheduler"""
+    import asyncio
+    import logging
+    
+    logger = logging.getLogger("app.services.scheduler.wrapper")
+    
+    try:
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Import here to avoid circular imports
+        from app.services.email_sender import send_educational_email_task
+        
+        logger.info(f"Running send_email_wrapper for subscription {subscription_id}")
+        result = loop.run_until_complete(send_educational_email_task(subscription_id))
+        logger.info(f"Result from email task: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error in send_email_wrapper: {type(e).__name__}: {str(e)}")
+        return False
+    finally:
+        loop.close()
+
+
 def add_email_job(subscription: Subscription):
     """Add or update an email job in the scheduler"""
     job_id = f'email_{subscription.id}'
@@ -62,19 +89,8 @@ def add_email_job(subscription: Subscription):
     # Remove existing job if it exists
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
-        
-    # Create a wrapper function that will properly call the async function
-    def send_email_wrapper(subscription_id):
-        """Wrapper to handle the async function in the scheduler"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(send_educational_email(subscription_id))
-            return result
-        finally:
-            loop.close()
     
-    # Add new job
+    # Add new job using the top-level wrapper function
     scheduler.add_job(
         func=send_email_wrapper,
         trigger='cron',
