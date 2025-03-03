@@ -74,6 +74,20 @@ async def create_subscription(
     # Schedule the email job
     add_email_job(subscription)
     
+    # Send an immediate first email
+    import asyncio
+    import logging
+    from app.services.email_sender import send_educational_email_task
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Use background_tasks to send the welcome email asynchronously
+        background_tasks.add_task(send_educational_email_task, subscription.id)
+        logger.info(f"Scheduled immediate welcome email for new API subscription {subscription.id} to {subscription.email}")
+    except Exception as e:
+        logger.error(f"Error scheduling welcome email for API subscription: {str(e)}")
+    
     return subscription
 
 

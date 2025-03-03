@@ -253,8 +253,16 @@ async def subscribe(
     from app.services.scheduler import add_email_job
     add_email_job(subscription)
     
+    # Send an immediate first email
+    from app.services.email_sender import send_educational_email_task
+    try:
+        asyncio.create_task(send_educational_email_task(subscription.id))
+        logger.info(f"Scheduled immediate welcome email for new subscription {subscription.id} to {email}")
+    except Exception as e:
+        logger.error(f"Error scheduling welcome email: {str(e)}")
+    
     # Success
-    flash(request, f"Subscription to {topic} confirmed! You'll receive your first email soon.", "success")
+    flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly.", "success")
     
     # If user is logged in, redirect to dashboard
     if current_user:
