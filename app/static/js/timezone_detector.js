@@ -96,13 +96,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (preferredTimeInput && !preferredTimeInput.value) {
             // Get the current time in the local timezone
             const now = new Date();
-            const hours = now.getHours();
             
-            // Choose a reasonable time: if morning, set to 9:00, if afternoon/evening, set to 19:00
-            let suggestedHour = (hours < 12) ? 9 : 19;
+            // Set to current time + 2 minutes
+            now.setMinutes(now.getMinutes() + 2);
+            
+            // Extract hours and minutes
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
             
             // Format as HH:MM
-            const suggestedTime = `${suggestedHour.toString().padStart(2, '0')}:00`;
+            const suggestedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
             preferredTimeInput.value = suggestedTime;
             
             // Add a small indicator for this auto-filled time

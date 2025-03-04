@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}LearningPulse - Daily Educational Content{% endblock %}
+{% block title %}LearnByEmail - Daily Educational Content{% endblock %}
 
 {% block content %}
 <div class="row mt-4">
@@ -9,7 +9,7 @@
             <div class="card-body">
                 <h2 class="card-title">Learn Something New Every Day</h2>
                 <p class="card-text">
-                    LearningPulse delivers daily educational content straight to your inbox.
+                    LearnByEmail delivers daily educational content straight to your inbox.
                     Choose a topic you're interested in, and we'll send you bite-sized lessons to help you learn and grow.
                 </p>
                 <ul class="list-group list-group-flush mb-3">
@@ -90,4 +90,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/additional_timezones.js') }}"></script>
+<script src="{{ url_for('static', filename='js/timezone_detector.js') }}"></script>
 {% endblock %}
