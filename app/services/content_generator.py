@@ -225,7 +225,7 @@ Keep the language friendly and engaging, and ensure each section is {length_inst
             
             # Find all code blocks (```language ... ```)
             # The (?s) flag makes . match newlines too, ensuring multiline code blocks are captured
-            code_pattern = r'```(python|javascript|java|cpp|html|css|sql)?(?s)(.*?)```'
+            code_pattern = r'(?s)```(python|javascript|java|cpp|html|css|sql)?(.*?)```'
             
             def code_replacer(match):
                 lang = match.group(1) or ""
