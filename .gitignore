@@ -25,7 +25,8 @@ venv/
 ENV/
 env/
 fastapi/
-learningpulse310/
+learnbyemail-venv/
+learnbyemail-venv-new/
 
 # Environment variables
 .env
