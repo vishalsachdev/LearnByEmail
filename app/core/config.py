@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "LearnByEmail"
     API_V1_STR: str = "/api/v1"
     API_SECRET_KEY: str
+    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
     
     @property
     def SECRET_KEY(self) -> str:

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -10,10 +10,13 @@ from app.core.security import (
     authenticate_user,
     create_access_token,
     get_current_user,
+    generate_reset_token,
+    get_reset_token_expiry,
 )
 from app.db.session import get_db
 from app.db.models import User
-from app.schemas.user import Token, UserCreate, UserResponse
+from app.schemas.user import Token, UserCreate, UserResponse, UserPasswordReset, UserResetToken, UserResetPassword
+from app.services.email_sender import send_password_reset_email
 
 router = APIRouter()
 
@@ -82,3 +85,79 @@ async def read_users_me(
     Get current user
     """
     return current_user
+
+
+@router.post("/forgot-password", response_model=UserResetToken)
+async def forgot_password(
+    user_data: UserPasswordReset, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Request a password reset token
+    """
+    user = db.query(User).filter(User.email == user_data.email).first()
+    
+    # Always return success even if email not found (to prevent email enumeration)
+    if not user:
+        # Return a dummy token for non-existent users
+        dummy_token = generate_reset_token()
+        return {"token": dummy_token}
+    
+    # Generate and store reset token for the user
+    reset_token = generate_reset_token()
+    user.reset_token = reset_token
+    user.reset_token_expires = get_reset_token_expiry()
+    db.commit()
+    
+    # Send password reset email in background
+    background_tasks.add_task(
+        send_password_reset_email,
+        email=user.email,
+        token=reset_token
+    )
+    
+    return {"token": reset_token}
+
+
+@router.post("/reset-password", response_model=UserResponse)
+async def reset_password(
+    reset_data: UserResetPassword,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Reset password using token
+    """
+    # Check if passwords match
+    if reset_data.password != reset_data.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+    
+    # Find user by token
+    user = db.query(User).filter(
+        User.reset_token == reset_data.token,
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset token",
+        )
+    
+    # Check if token is expired
+    if not user.reset_token_expires or user.reset_token_expires < timedelta(seconds=0):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token expired",
+        )
+    
+    # Update password and clear token
+    user.password_hash = User.get_password_hash(reset_data.password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    db.refresh(user)
+    
+    return user

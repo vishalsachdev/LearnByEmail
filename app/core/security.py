@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union, Optional
 import secrets
 import logging
+import uuid
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -144,6 +145,24 @@ def generate_secret_key(length: int = 64) -> str:
         A secure random string suitable for use as a SECRET_KEY
     """
     return secrets.token_urlsafe(length)
+
+
+def generate_reset_token() -> str:
+    """Generate a unique reset token for password recovery.
+    
+    Returns:
+        A secure random string suitable for password reset
+    """
+    return f"{uuid.uuid4().hex}{secrets.token_urlsafe(16)}"
+
+
+def get_reset_token_expiry() -> datetime:
+    """Get expiry datetime for reset tokens.
+    
+    Returns:
+        Datetime when the token should expire (24 hours from now)
+    """
+    return datetime.utcnow() + timedelta(hours=24)
 
 
 if __name__ == "__main__":

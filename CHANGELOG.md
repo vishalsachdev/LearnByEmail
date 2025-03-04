@@ -6,19 +6,26 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ### 2025-03-04
 
-1. **Complete Rebranding to LearnByEmail**
+1. **Password Recovery Implementation**
+   - Added secure token-based password reset functionality
+   - Created email delivery for password reset links
+   - Implemented token expiration (24 hours) for security
+   - Added dedicated forgot password and reset password pages
+   - Integrated with existing authentication system
+
+2. **Complete Rebranding to LearnByEmail**
    - Renamed application from LearningPulse to LearnByEmail
    - Updated all documentation files with new brand name
    - Replaced references in templates and configuration files
    - Updated email sender addresses to use learnbyemail.com domain
 
-2. **Improved Color Scheme**
+3. **Improved Color Scheme**
    - Implemented consistent blue and gray professional theme
    - Updated CSS variables across all template files
    - Improved visual consistency between all application pages
    - Used Material Design inspired color palette
 
-3. **Security Enhancements**
+4. **Security Enhancements**
    - Fixed SECRET_KEY security vulnerability with proper validation
    - Added secure key generation utility and documentation
    - Implemented required server-side validation of secret key length
@@ -100,12 +107,6 @@ This document tracks feature implementations, discussions, and future plans for 
    - Batch operations (pause, delete, change frequency)
    - Group subscriptions by category
    - Unified scheduling for related topics
-
-6. **Password Recovery** - Allow users to reset forgotten passwords
-   - File: `feature_1_password_recovery.md`
-   - Secure token-based reset process
-   - Email delivery of reset links
-   - Secure password update mechanism
 
 ## Technical Improvements Needed
 

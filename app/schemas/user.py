@@ -16,6 +16,22 @@ class UserLogin(UserBase):
     password: str
 
 
+class UserPasswordReset(BaseModel):
+    email: EmailStr
+
+
+class UserResetToken(BaseModel):
+    token: str
+    status: str = "success"
+    message: str = "Password reset email sent"
+
+
+class UserResetPassword(BaseModel):
+    token: str
+    password: str
+    confirm_password: str
+
+
 class UserResponse(UserBase):
     id: int
     created_at: datetime

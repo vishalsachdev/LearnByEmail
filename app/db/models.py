@@ -13,6 +13,8 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(256), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    reset_token = Column(String(256), nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     
     subscriptions = relationship("Subscription", back_populates="user")
     

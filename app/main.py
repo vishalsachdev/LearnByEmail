@@ -109,7 +109,10 @@ def url_for(name: str, **path_params) -> str:
         "dashboard": "/dashboard",
         "logout": "/logout",
         "subscribe": "/subscribe",
-        "static": "/static"
+        "static": "/static",
+        "forgot_password_page": "/forgot-password",
+        "reset_password_page": "/reset-password",
+        "login_page": "/login"
     }
     
     url = paths.get(name, "/")
@@ -117,6 +120,10 @@ def url_for(name: str, **path_params) -> str:
     # Special case for static files
     if name == "static" and "filename" in path_params:
         url = f"{url}/{path_params['filename']}"
+
+    # Add query params for reset-password
+    if name == "reset_password_page" and "token" in path_params:
+        url = f"{url}?token={path_params['token']}"
         
     return url
 
@@ -401,6 +408,35 @@ async def logout():
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie(key="access_token")
     return response
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Forgot password page"""
+    if current_user:
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {"request": request, "current_user": current_user}
+    )
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(
+    request: Request,
+    token: str = None,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Reset password page"""
+    if current_user:
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {"request": request, "current_user": current_user, "token": token}
+    )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
