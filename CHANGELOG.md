@@ -1,6 +1,6 @@
-# LearningPulse Changelog and Development Progress
+# LearnByEmail Changelog and Development Progress
 
-This document tracks feature implementations, discussions, and future plans for the LearningPulse project.
+This document tracks feature implementations, discussions, and future plans for the LearnByEmail project.
 
 ## Implemented Features
 

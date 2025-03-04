@@ -36,7 +36,7 @@ Base.metadata.create_all(bind=engine)
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="API for LearningPulse - Daily educational content via email",
+    description="API for LearnByEmail - Daily educational content via email",
     version="0.1.0",
 )
 
@@ -642,8 +642,8 @@ async def direct_test_email(
         message = Mail(
             from_email=settings.SENDGRID_FROM_EMAIL,
             to_emails=email,
-            subject="LearningPulse Test Email",
-            html_content="<p>This is a test email from LearningPulse to verify email sending.</p>"
+            subject="LearnByEmail Test Email",
+            html_content="<p>This is a test email from LearnByEmail to verify email sending.</p>"
         )
         
         sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
@@ -663,6 +663,17 @@ async def direct_test_email(
 async def startup_event():
     """Startup event handler to initialize scheduler and jobs"""
     logger.info("Starting up application...")
+    
+    # Check for secure SECRET_KEY
+    if os.environ.get("API_SECRET_KEY") is None:
+        logger.critical("SECURITY RISK: No API_SECRET_KEY environment variable set! Application is insecure.")
+        logger.critical("Generate a new key with: python -m app.core.security")
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            raise RuntimeError("CRITICAL: Cannot start in production without API_SECRET_KEY")
+    elif len(settings.SECRET_KEY) < 32:
+        logger.warning("SECURITY RISK: API_SECRET_KEY is too short. It should be at least 32 characters.")
+        logger.warning("Generate a more secure key with: python -m app.core.security")
+    
     init_scheduler_jobs()
     start_scheduler()
 

@@ -1,6 +1,6 @@
-# LearningPulse - FastAPI Edition
+# LearnByEmail - FastAPI Edition
 
-LearningPulse is an educational email subscription service that delivers personalized, AI-generated educational content on topics of your choice. This version is built with FastAPI for improved performance and scalability.
+LearnByEmail is an educational email subscription service that delivers personalized, AI-generated educational content on topics of your choice. This version is built with FastAPI for improved performance and scalability.
 
 ## Features
 
@@ -42,9 +42,10 @@ LearningPulse is an educational email subscription service that delivers persona
 
 4. Set up environment variables (create a `.env` file with the following):
    ```
-   # Required settings
-   FLASK_SECRET_KEY=your-secret-key
-   DATABASE_URL=sqlite:///./learningpulse.db
+   # Required settings - SECURITY CRITICAL
+   # Generate a secure key with: python -m app.core.security
+   API_SECRET_KEY=your-secure-generated-key-minimum-32-characters-long
+   DATABASE_URL=sqlite:///./learnbyemail.db
    
    # Content generation (required)
    GEMINI_API_KEY=your-gemini-api-key

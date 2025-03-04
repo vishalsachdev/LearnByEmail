@@ -5,14 +5,25 @@ from pydantic import AnyHttpUrl, validator
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "LearningPulse"
+    PROJECT_NAME: str = "LearnByEmail"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("FLASK_SECRET_KEY", "default-secret-key-change-in-production")
+    SECRET_KEY: str = os.getenv("API_SECRET_KEY")
+    
+    @validator("SECRET_KEY", pre=True)
+    def validate_secret_key(cls, v: Optional[str]) -> str:
+        if not v:
+            raise ValueError("SECRET_KEY environment variable is required for security")
+        if v == "default-secret-key-change-in-production":
+            raise ValueError("Default SECRET_KEY detected. Please change it for security")
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        return v
+        
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./learningpulse.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./learnbyemail.db")
     
     # CORS Origins
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -29,7 +40,7 @@ class Settings(BaseSettings):
     GMAIL_USERNAME: Optional[str] = os.getenv("GMAIL_USERNAME")
     GMAIL_APP_PASSWORD: Optional[str] = os.getenv("GMAIL_APP_PASSWORD")
     SENDGRID_API_KEY: Optional[str] = os.getenv("SENDGRID_API_KEY")
-    SENDGRID_FROM_EMAIL: Optional[str] = os.getenv("SENDGRID_FROM_EMAIL", "noreply@learningpulse.app")
+    SENDGRID_FROM_EMAIL: Optional[str] = os.getenv("SENDGRID_FROM_EMAIL", "noreply@learnbyemail.com")
     
     # Content generation
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")

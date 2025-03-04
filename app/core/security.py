@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Union, Optional
+import secrets
+import logging
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -11,6 +13,8 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.schemas.user import TokenPayload
+
+logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
@@ -128,3 +132,24 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[Any]:
     if not verify_password(password, user.password_hash):
         return None
     return user
+
+
+def generate_secret_key(length: int = 64) -> str:
+    """Generate a cryptographically secure random key.
+    
+    Args:
+        length: The minimum length of the key in bytes (default 64)
+        
+    Returns:
+        A secure random string suitable for use as a SECRET_KEY
+    """
+    return secrets.token_urlsafe(length)
+
+
+if __name__ == "__main__":
+    # Generate a new secret key when this module is run directly
+    print("\n=== GENERATING NEW SECRET KEY ===")
+    print(f"\nAdd this to your .env file:")
+    print(f"API_SECRET_KEY={generate_secret_key()}")
+    print("\nWARNING: Keep this key secure and never commit it to version control!")
+    print("===============================\n")

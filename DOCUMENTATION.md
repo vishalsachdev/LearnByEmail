@@ -1,8 +1,8 @@
-# LearningPulse FastAPI - Comprehensive Documentation
+# LearnByEmail FastAPI - Comprehensive Documentation
 
 ## Overview
 
-LearningPulse is an educational content delivery platform that sends personalized, AI-generated educational emails on topics of the user's choice. This implementation uses FastAPI for improved performance, Gemini AI for content generation, and SendGrid/SMTP for email delivery. The modern, responsive UI provides an intuitive user experience across all devices.
+LearnByEmail is an educational content delivery platform that sends personalized, AI-generated educational emails on topics of the user's choice. This implementation uses FastAPI for improved performance, Gemini AI for content generation, and SendGrid/SMTP for email delivery. The modern, responsive UI provides an intuitive user experience across all devices.
 
 ## Architecture
 
@@ -81,9 +81,10 @@ app/
 Create a `.env` file in the root directory with the following variables:
 
 ```
-# Required settings
-FLASK_SECRET_KEY=your-secret-key
-DATABASE_URL=sqlite:///./learningpulse.db
+# Required settings - SECURITY CRITICAL
+# Generate a secure key with: python -m app.core.security
+API_SECRET_KEY=your-secure-generated-key-minimum-32-characters-long
+DATABASE_URL=sqlite:///./learnbyemail.db
 
 # Content generation (required)
 GEMINI_API_KEY=your-gemini-api-key
@@ -242,9 +243,9 @@ The content generator will use the first available model that works with your AP
 
 ### Color Scheme
 
-- Primary color: #4a6baf (blue)
-- Secondary color: #6c63ff (purple)
-- Accent color: #f50057 (pink)
+- Primary color: #34a853 (green)
+- Secondary color: #4285f4 (blue)
+- Accent color: #ea4335 (red)
 - Background color: #f8f9fa (light gray)
 - Text colors: #333 (dark gray), #666 (medium gray)
 

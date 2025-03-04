@@ -1,16 +1,16 @@
-# LearningPulse FastAPI Development Guide
+# LearnByEmail FastAPI Development Guide
 
 ## Commands
-- Activate virtual environment first: `source learningpulse310/bin/activate`
+- Activate virtual environment first: `source learnbyemail-venv/bin/activate`
 - Run app: `python3 main.py`
 - Run with uvicorn: `uvicorn app.main:app --reload`
 - View logs: `tail -f app.log`
 - Test email sending: Use the dashboard "Test Send Email Now" button or `curl http://localhost:8000/test-email/{subscription_id}`
-- Reset database: Delete `learningpulse.db` and restart the app
+- Reset database: Delete `learnbyemail.db` and restart the app
 - Manage database: `alembic revision --autogenerate -m "message"` and `alembic upgrade head` (if alembic is configured)
 
 ## Environment Variables
-- `FLASK_SECRET_KEY`: Required for app security and JWT
+- `API_SECRET_KEY`: Required for app security and JWT (must be at least 32 chars, generate with `python -m app.core.security`)
 - `DATABASE_URL`: SQLite or PostgreSQL connection string
 - `GEMINI_API_KEY`: For content generation with Google's Gemini API (supports all model versions)
 - `SENDGRID_API_KEY`: For SendGrid email delivery
@@ -39,4 +39,4 @@
 - For Gemini issues, check that your API key has access to the models
 - Database issues: Check SQLite file permissions or connection string
 - JWT issues: Ensure SECRET_KEY is properly set in .env
-- Dependencies issues: Ensure you're using the correct virtual environment (learningpulse310) and run `pip install -r requirements.txt` if missing packages
+- Dependencies issues: Ensure you're using the correct virtual environment (learnbyemail-venv) and run `pip install -r requirements.txt` if missing packages
