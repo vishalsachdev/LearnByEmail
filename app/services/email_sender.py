@@ -61,6 +61,13 @@ async def create_html_email(subject, content, to_email):
             h1 {{ font-size: 24px; margin-bottom: 20px; }}
             h2 {{ font-size: 20px; margin-top: 25px; }}
             p {{ margin: 15px 0; }}
+            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; margin: 15px 0; }}
+            code {{ font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; }}
+            .language-python {{ color: #333; }}
+            .language-python .keyword {{ color: #0000FF; }}
+            .language-python .number {{ color: #008000; }}
+            .language-python .string {{ color: #A31515; }}
+            .language-python .comment {{ color: #008000; font-style: italic; }}
             .footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }}
         </style>
     </head>
@@ -171,12 +178,18 @@ async def send_educational_email_task(subscription_id: int):
             logger.info(f"Skipping email for {subscription.email} - too soon since last send")
             return False
         
-        # Get previous content
-        previous_contents = [
-            h.content for h in db.query(EmailHistory).filter(
-                EmailHistory.subscription_id == subscription.id
-            ).order_by(EmailHistory.sent_at.desc()).limit(3).all()
-        ]
+        # Get all previous content for enhanced continuity
+        previous_history = db.query(EmailHistory).filter(
+            EmailHistory.subscription_id == subscription.id
+        ).order_by(EmailHistory.sent_at.asc()).all()
+        
+        # Extract content from history records
+        previous_contents = [h.content for h in previous_history]
+        
+        # Get sequence number (for "Lesson X" labeling)
+        sequence_number = len(previous_history) + 1
+        
+        logger.info(f"Generating content for subscription {subscription_id}, lesson #{sequence_number} with {len(previous_contents)} previous lessons as context")
         
         # Generate content
         content = await generate_educational_content(subscription.topic, previous_contents)
@@ -184,14 +197,20 @@ async def send_educational_email_task(subscription_id: int):
             logger.error(f"Failed to generate content for {subscription.email}")
             return False
         
-        # Format HTML content for email
+        # Format HTML content for email with lesson number
         topic_url_encoded = urllib.parse.quote(subscription.topic)
         content_preview = urllib.parse.quote(content[:100])
+        
+        # Include lesson sequence number for continuity
+        lesson_badge = f"""<div style="display: inline-block; background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; margin-bottom: 15px;">Lesson #{sequence_number}</div>"""
+        
         html_content = f"""
         <div style="max-width: 600px; margin: 0 auto;">
+            {lesson_badge}
             {content}
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                <h3 style="color: #34495e;">Continue Learning</h3>
+                <h3 style="color: #34495e;">Continue Your Learning Journey</h3>
+                <p>This is lesson #{sequence_number} in your {subscription.topic} learning journey.</p>
                 <p>Want to explore this topic further? <a href="https://chat.openai.com/chat?prompt=Teach%20me%20more%20about%20{topic_url_encoded}%20building%20upon%20this%20lesson:%20{content_preview}">Discuss this lesson with an AI tutor</a></p>
             </div>
         </div>
@@ -207,7 +226,7 @@ async def send_educational_email_task(subscription_id: int):
             logger.info(f"Attempting to send email via SendGrid to {subscription.email}")
             sent = await send_via_sendgrid(
                 subscription.email,
-                f"Your Daily {subscription.topic} Lesson",
+                f"Your {subscription.topic} Lesson #{sequence_number}",
                 html_content
             )
             
@@ -223,7 +242,7 @@ async def send_educational_email_task(subscription_id: int):
                 logger.info(f"Attempting to send email via SMTP to {subscription.email}")
                 sent = await send_via_smtp(
                     subscription.email,
-                    f"Your Daily {subscription.topic} Lesson",
+                    f"Your {subscription.topic} Lesson #{sequence_number}",
                     html_content
                 )
                 

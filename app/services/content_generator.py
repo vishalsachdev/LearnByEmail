@@ -116,14 +116,32 @@ async def generate_educational_content(topic: str, previous_contents: Optional[L
         # Setup Gemini
         model = await setup_gemini()
         
-        # Process previous content if available
+        # Process previous content if available - Enhanced Content Continuity
         history_context = ""
         if previous_contents and not is_preview:
             if isinstance(previous_contents, list) and all(isinstance(item, str) for item in previous_contents):
-                history_context = "Previous lessons covered:\n" + "\n".join(previous_contents[-3:])  # Last 3 emails
+                # Use all previous content for context, not just the last 3
+                num_lessons = len(previous_contents)
+                
+                if num_lessons > 0:
+                    # Format the history with lesson numbers
+                    history_lessons = []
+                    for i, content in enumerate(previous_contents):
+                        # Extract just the title and key points to reduce token usage if needed
+                        # This is a simple extraction - could be more sophisticated
+                        content_summary = content[:500] + "..." if len(content) > 500 else content
+                        history_lessons.append(f"Lesson {i+1}: {content_summary}")
+                    
+                    history_context = f"Previous lessons covered ({num_lessons} total):\n" + "\n---\n".join(history_lessons)
+                    
+                    # Add instruction to build upon previous content
+                    history_context += "\n\nBUILD UPON this previous knowledge. Reference concepts from earlier lessons when relevant. This is lesson #" + str(num_lessons + 1) + " in the series."
             else:
                 logger.warning("Invalid previous_contents format provided")
                 history_context = ""
+                
+        # Log the size of context being used
+        logger.info(f"Using {len(history_context)} characters of historical context")
 
         # Adjust content length based on preview mode
         length_instruction = "concise and brief" if is_preview else "concise but informative"
@@ -149,12 +167,26 @@ Structure the response exactly as follows:
 3. Follow with a very concise explanation titled "Here's why this matters:"
 4. End with a brief thought-provoking question titled "Question for Reflection:"
 
+IMPORTANT FORMATTING GUIDELINES:
+- For any code examples, use proper markdown code blocks with triple backticks.
+- Begin code blocks with ```language_name (e.g., ```python) and end with ```.
+- CRITICAL: Ensure all special characters in code (like ** for exponentiation) are preserved correctly.
+- CRITICAL: Do not convert characters like **, //, *, /, >, <, etc. to their text descriptions in code examples.
+- Make sure your code examples are syntactically correct in the language you're using.
+- Example for Python code:
+  ```python
+  numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  even_squares = [num**2 for num in numbers if num % 2 == 0]  # ** for exponentiation
+  print(even_squares)  # Output: [4, 16, 36, 64, 100]
+  ```
+
 Keep the language friendly and engaging. This is a PREVIEW so keep it brief (about 30-40% the length of a full lesson)."""
         else:
             prompt = f"""Create an educational email about {sanitized_topic}. 
 {history_context}
 {difficulty_instruction}
-Please create new content that builds upon previous lessons if available.
+IMPORTANT: Create content that explicitly builds upon and references previous lessons.
+You are creating a continuous learning journey, not isolated lessons.
 Structure the response exactly as follows:
 
 1. Start with "**Subject: [Topic-specific engaging title]**"
@@ -162,6 +194,19 @@ Structure the response exactly as follows:
 3. Follow with a clear explanation titled "Here's why this matters:"
 4. Include a practical example or application titled "Let's see it in action:"
 5. End with a thought-provoking question titled "Question for Reflection:"
+
+IMPORTANT FORMATTING GUIDELINES:
+- For any code examples, use proper markdown code blocks with triple backticks.
+- Begin code blocks with ```language_name (e.g., ```python) and end with ```.
+- CRITICAL: Ensure all special characters in code (like ** for exponentiation) are preserved correctly.
+- CRITICAL: Do not convert characters like **, //, *, /, >, <, etc. to their text descriptions in code examples.
+- Make sure your code examples are syntactically correct in the language you're using.
+- Example for Python code:
+  ```python
+  numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  even_squares = [num**2 for num in numbers if num % 2 == 0]  # ** for exponentiation
+  print(even_squares)  # Output: [4, 16, 36, 64, 100]
+  ```
 
 Keep the language friendly and engaging, and ensure each section is {length_instruction}."""
 
@@ -172,8 +217,52 @@ Keep the language friendly and engaging, and ensure each section is {length_inst
         logger.debug("Successfully received response from Gemini API")
 
         # Format the content with HTML
-        # First remove any remaining ** marks
-        content = content.replace("**", "")
+        
+        # Process code blocks first before any other replacements
+        def format_code_blocks(content_text):
+            import re
+            import html
+            
+            # Find all code blocks (```language ... ```)
+            # The (?s) flag makes . match newlines too, ensuring multiline code blocks are captured
+            code_pattern = r'```(python|javascript|java|cpp|html|css|sql)?(?s)(.*?)```'
+            
+            def code_replacer(match):
+                lang = match.group(1) or ""
+                code = match.group(2)
+                
+                # Special handling for Python code to ensure ** is preserved
+                if lang.lower() == 'python':
+                    # Make sure exponentiation and other operators are preserved
+                    code = code.replace('* *', '**')  # Fix broken exponentiation operators
+                    
+                    # Check for common mistaken transcriptions
+                    code = code.replace('number 2', 'number**2')
+                    code = code.replace('number * 2', 'number**2')
+                    code = code.replace('number^ 2', 'number**2')
+                    code = code.replace('number ^2', 'number**2')
+                    code = code.replace('number to the power of 2', 'number**2')
+                
+                # Escape HTML entities to prevent rendering issues, but preserve special chars
+                escaped_code = html.escape(code)
+                
+                # Add specific styling for code highlighting
+                language_class = f"language-{lang}" if lang else ""
+                
+                # Format the code block into HTML with proper styling
+                return f"""<pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', monospace; line-height: 1.5;" class="{language_class}"><code>{escaped_code}</code></pre>"""
+            
+            # Replace code blocks with their HTML equivalents
+            processed_content = re.sub(code_pattern, code_replacer, content_text, flags=re.DOTALL)
+            return processed_content
+        
+        # Handle code blocks first
+        content = format_code_blocks(content)
+        
+        # Now handle the remaining formatting
+        # First remove any remaining ** marks from headers, but not code blocks
+        # (code blocks have already been converted to HTML above)
+        content = content.replace("**Subject:", "Subject:").replace("**", "")
         
         # Create different formatting for preview vs full content
         if is_preview:
