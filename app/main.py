@@ -665,14 +665,15 @@ async def startup_event():
     logger.info("Starting up application...")
     
     # Check for secure SECRET_KEY
-    if os.environ.get("API_SECRET_KEY") is None:
-        logger.critical("SECURITY RISK: No API_SECRET_KEY environment variable set! Application is insecure.")
+    try:
+        if len(settings.API_SECRET_KEY) < 32:
+            logger.warning("SECURITY RISK: API_SECRET_KEY is too short. It should be at least 32 characters.")
+            logger.warning("Generate a more secure key with: python -m app.core.security")
+    except Exception as e:
+        logger.critical(f"SECURITY RISK: {str(e)}")
         logger.critical("Generate a new key with: python -m app.core.security")
         if os.getenv("ENVIRONMENT", "development").lower() == "production":
-            raise RuntimeError("CRITICAL: Cannot start in production without API_SECRET_KEY")
-    elif len(settings.SECRET_KEY) < 32:
-        logger.warning("SECURITY RISK: API_SECRET_KEY is too short. It should be at least 32 characters.")
-        logger.warning("Generate a more secure key with: python -m app.core.security")
+            raise RuntimeError("CRITICAL: Cannot start in production without valid API_SECRET_KEY")
     
     init_scheduler_jobs()
     start_scheduler()

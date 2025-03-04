@@ -7,17 +7,18 @@ from pydantic import AnyHttpUrl, validator
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LearnByEmail"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("API_SECRET_KEY")
+    API_SECRET_KEY: str
     
-    @validator("SECRET_KEY", pre=True)
-    def validate_secret_key(cls, v: Optional[str]) -> str:
-        if not v:
-            raise ValueError("SECRET_KEY environment variable is required for security")
-        if v == "default-secret-key-change-in-production":
-            raise ValueError("Default SECRET_KEY detected. Please change it for security")
-        if len(v) < 32:
-            raise ValueError("SECRET_KEY must be at least 32 characters long")
-        return v
+    @property
+    def SECRET_KEY(self) -> str:
+        """Use API_SECRET_KEY for the application's secret key."""
+        if not self.API_SECRET_KEY:
+            raise ValueError("API_SECRET_KEY environment variable is required for security")
+        if self.API_SECRET_KEY == "default-secret-key-change-in-production":
+            raise ValueError("Default API_SECRET_KEY detected. Please change it for security")
+        if len(self.API_SECRET_KEY) < 32:
+            raise ValueError("API_SECRET_KEY must be at least 32 characters long")
+        return self.API_SECRET_KEY
         
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
@@ -48,6 +49,7 @@ class Settings(BaseSettings):
     class Config:
         case_sensitive = True
         env_file = ".env"
+        extra = "allow"
 
 
 settings = Settings()
