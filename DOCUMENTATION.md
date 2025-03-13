@@ -78,13 +78,19 @@ app/
 
 ## Environment Configuration
 
+The application has a flexible environment configuration system that automatically detects whether it's running on Replit or in a local environment and loads variables accordingly.
+
+### Local Development
+
 Create a `.env` file in the root directory with the following variables:
 
 ```
 # Required settings - SECURITY CRITICAL
 # Generate a secure key with: python -m app.core.security
 API_SECRET_KEY=your-secure-generated-key-minimum-32-characters-long
-DATABASE_URL=sqlite:///./learnbyemail.db
+
+# Your application's public URL (important for password reset emails)
+BASE_URL=http://localhost:8000
 
 # Content generation (required)
 GEMINI_API_KEY=your-gemini-api-key
@@ -93,13 +99,24 @@ GEMINI_API_KEY=your-gemini-api-key
 # Option 1: SendGrid (recommended)
 SENDGRID_API_KEY=your-sendgrid-api-key
 SENDGRID_FROM_EMAIL=your-verified-sender@example.com
+SENDGRID_FROM_NAME=LearnByEmail
 
 # Option 2: Gmail SMTP
 GMAIL_USERNAME=your-gmail-username@gmail.com
 GMAIL_APP_PASSWORD=your-app-specific-password
 ```
 
+### Replit Deployment
+
+For Replit deployment, add these same variables as Secrets in the Replit environment:
+
+1. Go to the "Secrets" tab in your Replit project
+2. Add each of the required environment variables as individual secrets
+3. The application will automatically detect it's running on Replit and use these secrets instead of the .env file
+
 > **Note**: For email delivery to work, you must configure either SendGrid (recommended) or Gmail SMTP. Without these settings, the application will generate content but won't be able to deliver emails.
+
+> **Important**: If you're using a custom domain, make sure to set `BASE_URL` to your custom domain (e.g., https://learnbyemail.com) for proper functioning of password reset emails and other features that generate URLs.
 
 ## API Endpoints
 
@@ -273,10 +290,12 @@ The content generator will use the first available model that works with your AP
    - Ensure internet connectivity for API calls
 
 3. **Authentication Issues**
-   - Check that SECRET_KEY is set
-   - Clear browser cookies if experiencing login loops
-   - Ensure password meets minimum requirements
+   - Check that API_SECRET_KEY is set and at least 32 characters long
+   - Clear browser cookies if experiencing login loops or "already registered" errors
    - Check for database connectivity issues
+   - In Replit: If you delete the database and are still seeing "email already registered" errors, 
+     try clearing your browser cookies for the Replit domain or use incognito/private mode
+   - JWT tokens are stored in cookies and may persist even after database resets
 
 4. **Scheduling Problems**
    - Verify timezone settings

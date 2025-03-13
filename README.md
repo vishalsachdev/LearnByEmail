@@ -23,16 +23,18 @@ LearnByEmail is an educational email subscription service that delivers personal
 
 ## Installation
 
+### Local Development
+
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/learning-pulse-fastapi.git
-   cd learning-pulse-fastapi
+   git clone https://github.com/yourfork/LearnByEmail.git
+   cd LearnByEmail
    ```
 
 2. Create and activate a virtual environment:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv learnbyemail-venv
+   source learnbyemail-venv/bin/activate  # On Windows: learnbyemail-venv\Scripts\activate
    ```
 
 3. Install dependencies:
@@ -45,7 +47,9 @@ LearnByEmail is an educational email subscription service that delivers personal
    # Required settings - SECURITY CRITICAL
    # Generate a secure key with: python -m app.core.security
    API_SECRET_KEY=your-secure-generated-key-minimum-32-characters-long
-   DATABASE_URL=sqlite:///./learnbyemail.db
+   
+   # Your application's public URL (used for password reset emails, etc.)
+   BASE_URL=http://localhost:8000
    
    # Content generation (required)
    GEMINI_API_KEY=your-gemini-api-key
@@ -54,11 +58,29 @@ LearnByEmail is an educational email subscription service that delivers personal
    # Option 1: SendGrid
    SENDGRID_API_KEY=your-sendgrid-api-key
    SENDGRID_FROM_EMAIL=your-verified-sender@example.com
+   SENDGRID_FROM_NAME=LearnByEmail
    
    # Option 2: Gmail SMTP
    GMAIL_USERNAME=your-gmail-username
    GMAIL_APP_PASSWORD=your-gmail-app-password
    ```
+
+### Replit Deployment
+
+To deploy the application on Replit:
+
+1. Create a new Replit from this repository
+2. Add the following Secrets in the Replit environment:
+   - `API_SECRET_KEY`: Secure random key (minimum 32 characters)
+   - `BASE_URL`: Your public URL (e.g., https://learnbyemail.com or your Replit URL)
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `SENDGRID_API_KEY`: Your SendGrid API key
+   - `SENDGRID_FROM_EMAIL`: Your verified sender email
+   - `SENDGRID_FROM_NAME`: Display name for sender (e.g., "LearnByEmail")
+
+3. The application will automatically detect the Replit environment and use these secrets instead of a .env file.
+
+4. Run the application using the Replit Run button or `python main.py`
 
 ## Running the Application
 

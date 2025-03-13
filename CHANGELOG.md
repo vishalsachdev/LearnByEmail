@@ -4,6 +4,16 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ## Implemented Features
 
+### 2025-03-13
+
+1. **Environment Configuration and Deployment Improvements**
+   - Added environment detection for Replit vs local development
+   - Implemented automatic loading of environment variables from appropriate sources
+   - Added support for custom domain deployment with BASE_URL configuration
+   - Updated documentation for both Replit and local deployment
+   - Fixed password reset functionality with proper datetime comparison
+   - Added troubleshooting steps for cookie-related authentication issues
+
 ### 2025-03-12
 
 1. **Registration Flows and Usability Improvements**
