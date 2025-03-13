@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us - LearnByEmail{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>Contact Us</h1>
+        <p class="lead">We'd love to hear from you</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Get In Touch</h2>
+                    <p>
+                        Have questions, feedback, or need assistance with LearnByEmail? We're here to help!
+                    </p>
+                    
+                    <h3 class="mt-4">Email Us</h3>
+                    <p>
+                        For the fastest response, please email us at:
+                    </p>
+                    <p>
+                        <a href="mailto:support@learnbyemail.com" class="btn btn-primary">
+                            <i class="fas fa-envelope me-2"></i>support@learnbyemail.com
+                        </a>
+                    </p>
+                    
+                    <div class="row mt-5">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-question-circle fa-3x mb-3" style="color: var(--primary-color);"></i>
+                                    <h4>Support Inquiries</h4>
+                                    <p>Need help with your account or subscriptions?</p>
+                                    <a href="mailto:support@learnbyemail.com">support@learnbyemail.com</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-lightbulb fa-3x mb-3" style="color: var(--primary-color);"></i>
+                                    <h4>Feature Suggestions</h4>
+                                    <p>Have ideas to improve LearnByEmail?</p>
+                                    <a href="mailto:feedback@learnbyemail.com">feedback@learnbyemail.com</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="mt-5">Response Time</h3>
+                    <p>
+                        We aim to respond to all inquiries within 24-48 hours during business days. For urgent matters, please include "URGENT" in your email subject line.
+                    </p>
+                    
+                    <h3 class="mt-5">FAQs</h3>
+                    <div class="accordion mt-3" id="faqAccordion">
+                        <div class="accordion-item">
+                            <h4 class="accordion-header" id="faq1">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse1" aria-expanded="false" aria-controls="faqCollapse1">
+                                    How do I change my email delivery time?
+                                </button>
+                            </h4>
+                            <div id="faqCollapse1" class="accordion-collapse collapse" aria-labelledby="faq1" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    You can change your email delivery time from your dashboard. Simply log in, find your subscription, and click the "Edit" button. From there, you can adjust your preferred delivery time.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h4 class="accordion-header" id="faq2">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse2" aria-expanded="false" aria-controls="faqCollapse2">
+                                    Can I change my subscription topic?
+                                </button>
+                            </h4>
+                            <div id="faqCollapse2" class="accordion-collapse collapse" aria-labelledby="faq2" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Yes, you can edit your subscription topic from your dashboard. Log in, find your subscription, click "Edit," and update your topic. You'll start receiving content on your new topic within 24 hours.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h4 class="accordion-header" id="faq3">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse3" aria-expanded="false" aria-controls="faqCollapse3">
+                                    How do I cancel my subscription?
+                                </button>
+                            </h4>
+                            <div id="faqCollapse3" class="accordion-collapse collapse" aria-labelledby="faq3" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    You can cancel any subscription from your dashboard. Log in, locate the subscription you wish to cancel, and click the "Delete" button. You'll be asked to confirm, and then your subscription will be permanently removed.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h4 class="accordion-header" id="faq4">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse4" aria-expanded="false" aria-controls="faqCollapse4">
+                                    Is my data secure with LearnByEmail?
+                                </button>
+                            </h4>
+                            <div id="faqCollapse4" class="accordion-collapse collapse" aria-labelledby="faq4" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Yes, we take data security seriously. We encrypt sensitive information, never share your personal data with third parties, and adhere to strict privacy policies. You can review our full Privacy Policy for more details.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

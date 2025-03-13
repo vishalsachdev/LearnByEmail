@@ -118,7 +118,11 @@ def url_for(name: str, **path_params) -> str:
         "reset_password_page": "/reset-password",
         "login_page": "/login",
         "login_submit": "/login", 
-        "bulk_subscription_action": "/bulk-subscription-action"
+        "bulk_subscription_action": "/bulk-subscription-action",
+        "about_page": "/about",
+        "privacy_page": "/privacy",
+        "terms_page": "/terms",
+        "contact_page": "/contact"
     }
     
     url = paths.get(name, "/")
@@ -228,6 +232,54 @@ async def home(
     """Home page"""
     return templates.TemplateResponse(
         "index.html", 
+        {"request": request, "current_user": current_user}
+    )
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """About Us page"""
+    return templates.TemplateResponse(
+        "about.html",
+        {"request": request, "current_user": current_user}
+    )
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Privacy Policy page"""
+    return templates.TemplateResponse(
+        "privacy.html",
+        {"request": request, "current_user": current_user}
+    )
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Terms of Service page"""
+    return templates.TemplateResponse(
+        "terms.html",
+        {"request": request, "current_user": current_user}
+    )
+
+
+@app.get("/contact", response_class=HTMLResponse)
+async def contact_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Contact page"""
+    return templates.TemplateResponse(
+        "contact.html",
         {"request": request, "current_user": current_user}
     )
 

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}About Us - LearnByEmail{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>About LearnByEmail</h1>
+        <p class="lead">Learn something new every day, delivered straight to your inbox</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Our Mission</h2>
+                    <p>
+                        At LearnByEmail, we believe that learning should be accessible, bite-sized, and fit seamlessly into your daily routine. Our mission is to empower curious minds with concise, high-quality educational content delivered directly to your inbox on topics you're passionate about.
+                    </p>
+                    
+                    <h2 class="section-title mt-5">How It Works</h2>
+                    <p>
+                        Our platform is simple yet powerful:
+                    </p>
+                    <ol>
+                        <li><strong>Choose Your Topics</strong> - Tell us what you want to learn about - from programming to philosophy, history to health.</li>
+                        <li><strong>Set Your Schedule</strong> - Pick the time of day you'd like to receive your learning content.</li>
+                        <li><strong>Learn Daily</strong> - Receive bite-sized, educational content crafted specifically for your interests at your preferred time.</li>
+                    </ol>
+                    
+                    <h2 class="section-title mt-5">Our Technology</h2>
+                    <p>
+                        LearnByEmail leverages advanced AI technology to create personalized, educational content that's both accurate and engaging. Our system:
+                    </p>
+                    <ul>
+                        <li>Generates unique content based on your specific topic</li>
+                        <li>Adapts over time to focus on areas within your topic that might interest you</li>
+                        <li>Delivers content exactly when you want it, respecting your time zone and schedule</li>
+                    </ul>
+                    
+                    <h2 class="section-title mt-5">Our Team</h2>
+                    <p>
+                        LearnByEmail was created by a small team of passionate educators and technologists who believe in the power of continuous learning. We're dedicated to making education accessible, engaging, and tailored to your personal learning journey.
+                    </p>
+                    
+                    <h2 class="section-title mt-5">Join Our Learning Community</h2>
+                    <p>
+                        Ready to start learning? <a href="{{ url_for('home') }}">Sign up</a> today and join thousands of lifelong learners who are expanding their knowledge one email at a time.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
