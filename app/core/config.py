@@ -2,6 +2,10 @@ from typing import List, Optional
 import os
 from pydantic_settings import BaseSettings
 from pydantic import AnyHttpUrl, validator
+from app.core.env_config import load_environment_variables
+
+# Load environment variables from the appropriate source
+is_replit = load_environment_variables()
 
 
 class Settings(BaseSettings):
@@ -50,7 +54,7 @@ class Settings(BaseSettings):
     
     class Config:
         case_sensitive = True
-        env_file = ".env"
+        env_file = ".env" if not is_replit else None
         extra = "allow"
 
 
