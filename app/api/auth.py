@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -147,7 +147,7 @@ async def reset_password(
         )
     
     # Check if token is expired
-    if not user.reset_token_expires or user.reset_token_expires < timedelta(seconds=0):
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token expired",

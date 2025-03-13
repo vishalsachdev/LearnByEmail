@@ -21,7 +21,7 @@
                         </ul>
                     </div>
                     <div class="col-md-4 text-center">
-                        <a href="/register?email={{ subscription_email }}" class="btn btn-success btn-lg">
+                        <a href="{{ url_for('register_page') }}?email={{ subscription_email|urlencode }}" class="btn btn-success btn-lg">
                             <i class="fas fa-user-plus me-2"></i> Create Your Account
                         </a>
                     </div>
