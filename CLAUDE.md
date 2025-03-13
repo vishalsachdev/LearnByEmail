@@ -12,6 +12,7 @@
 ## Environment Variables
 - `API_SECRET_KEY`: Required for app security and JWT (must be at least 32 chars, generate with `python -m app.core.security`)
 - `DATABASE_URL`: SQLite or PostgreSQL connection string
+- `BASE_URL`: Your application's public URL (e.g., "https://learnbyemail.com" or "http://yourdomain.com")
 - `GEMINI_API_KEY`: For content generation with Google's Gemini API (supports all model versions)
 - `SENDGRID_API_KEY`: For SendGrid email delivery
 - `SENDGRID_FROM_EMAIL`: Sender address for SendGrid
