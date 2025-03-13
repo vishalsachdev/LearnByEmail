@@ -15,6 +15,7 @@
 - `GEMINI_API_KEY`: For content generation with Google's Gemini API (supports all model versions)
 - `SENDGRID_API_KEY`: For SendGrid email delivery
 - `SENDGRID_FROM_EMAIL`: Sender address for SendGrid
+- `SENDGRID_FROM_NAME`: Display name for sender (e.g., "LearnByEmail")
 
 ## Code Style
 - Imports: Standard library → third-party → local modules

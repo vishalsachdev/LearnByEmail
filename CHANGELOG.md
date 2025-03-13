@@ -4,6 +4,26 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ## Implemented Features
 
+### 2025-03-12
+
+1. **Registration Flows and Usability Improvements**
+   - Added registration prompt for non-logged-in users after subscription
+   - Fixed timezone display for "Last Sent" time in dashboard
+   - Corrected database constraint issues when deleting subscriptions with history
+   - Enhanced email sender configuration with authenticated domains
+   - Removed simple templates in favor of consistent base.html templates
+   - Fixed redirect flows to maintain login state after subscription actions
+
+### 2025-03-11
+
+1. **Bulk Subscription Management** - Manage multiple subscriptions at once
+   - Added checkbox selection for multiple subscriptions
+   - Implemented bulk delete functionality with confirmation
+   - Added bulk timezone change feature
+   - Added bulk delivery time change feature
+   - Created unified interface for different bulk actions
+   - Implemented mobile-responsive design for bulk operations
+
 ### 2025-03-04
 
 1. **Password Recovery Implementation**
@@ -101,12 +121,6 @@ This document tracks feature implementations, discussions, and future plans for 
    - Email history with search and filtering
    - Content rating system
    - Re-send functionality for past emails
-
-5. **Bulk Subscription Management** - Manage multiple subscriptions at once
-   - File: `feature_5_bulk_subscription_management.md`
-   - Batch operations (pause, delete, change frequency)
-   - Group subscriptions by category
-   - Unified scheduling for related topics
 
 ## Technical Improvements Needed
 

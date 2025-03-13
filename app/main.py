@@ -9,6 +9,7 @@ from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, timedelta
 import asyncio
 from starlette.middleware.sessions import SessionMiddleware
+import re
 
 from app.core.config import settings
 from app.db.session import get_db, engine
@@ -112,7 +113,9 @@ def url_for(name: str, **path_params) -> str:
         "static": "/static",
         "forgot_password_page": "/forgot-password",
         "reset_password_page": "/reset-password",
-        "login_page": "/login"
+        "login_page": "/login",
+        "login_submit": "/login", 
+        "bulk_subscription_action": "/bulk-subscription-action"
     }
     
     url = paths.get(name, "/")
@@ -120,6 +123,14 @@ def url_for(name: str, **path_params) -> str:
     # Special case for static files
     if name == "static" and "filename" in path_params:
         url = f"{url}/{path_params['filename']}"
+
+    # Special case for edit_subscription_page
+    if name == "edit_subscription_page" and "subscription_id" in path_params:
+        url = f"/edit-subscription/{path_params['subscription_id']}"
+    
+    # Special case for delete_subscription
+    if name == "delete_subscription" and "subscription_id" in path_params:
+        url = f"/delete-subscription/{path_params['subscription_id']}"
 
     # Add query params for reset-password
     if name == "reset_password_page" and "token" in path_params:
@@ -170,6 +181,39 @@ os.makedirs("app/templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
+# Validate topic function
+def validate_topic(topic, request, current_user, template_name="index.html", template_context=None):
+    """Validate topic and return response if invalid"""
+    context = template_context or {"request": request, "current_user": current_user}
+    
+    # Check minimum length
+    if len(topic.strip()) < 3:
+        flash(request, "Topic must be at least 3 characters long", "danger")
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(template_name, context)
+    
+    # Check if topic contains only valid characters
+    if not re.match(r'^[A-Za-z0-9\s\-_,.&+\'()]+$', topic):
+        flash(request, "Topic contains invalid characters. Please use only letters, numbers, spaces, and common punctuation.", "danger")
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(template_name, context)
+    
+    # Check maximum length
+    if len(topic) > 50:
+        flash(request, "Topic must be less than 50 characters", "danger")
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(template_name, context)
+    
+    # Topic is valid
+    return None
+
+
 # Front-end routes (HTML responses)
 @app.get("/", response_class=HTMLResponse)
 async def home(
@@ -179,7 +223,7 @@ async def home(
 ):
     """Home page"""
     return templates.TemplateResponse(
-        "simple.html", 
+        "index.html", 
         {"request": request, "current_user": current_user}
     )
 
@@ -199,10 +243,24 @@ async def subscribe(
     # Validate input
     if not email or not topic or not preferred_time or not timezone:
         flash(request, "All fields are required", "danger")
-        return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "current_user": current_user}
-        )
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "current_user": current_user}
+            )
+            
+    # Validate topic
+    invalid_response = validate_topic(
+        topic, 
+        request, 
+        current_user, 
+        "index.html", 
+        {"request": request, "current_user": current_user}
+    )
+    if invalid_response:
+        return invalid_response
     
     # Parse preferred time
     try:
@@ -212,10 +270,13 @@ async def subscribe(
         preferred_time_obj = datetime.now().replace(hour=hour, minute=minute).time()
     except (ValueError, IndexError):
         flash(request, "Invalid time format", "danger")
-        return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "current_user": current_user}
-        )
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "current_user": current_user}
+            )
     
     # If user is not logged in, we need to create or get a user account
     if not current_user:
@@ -246,10 +307,13 @@ async def subscribe(
     
     if existing:
         flash(request, "You are already subscribed to this topic", "warning")
-        return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "current_user": current_user}
-        )
+        if current_user:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        else:
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "current_user": current_user}
+            )
     
     # Create subscription
     subscription = Subscription(
@@ -278,16 +342,27 @@ async def subscribe(
     except Exception as e:
         logger.error(f"Error scheduling welcome email: {str(e)}")
     
-    # Success
-    flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly.", "success")
+    # Success message - different for logged in vs anonymous users
+    if current_user:
+        flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly.", "success")
+    else:
+        # Enhanced message for non-logged in users with registration prompt
+        flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly. <a href='/register?email={email}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences.", "success")
     
-    # If user is logged in, redirect to dashboard
+    # Always redirect to dashboard if logged in, otherwise show index page
     if current_user:
         return RedirectResponse(url="/dashboard", status_code=303)
     else:
+        # For non-logged in users, set a flag to show registration prompt
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "current_user": None}
+            {
+                "request": request, 
+                "current_user": None,
+                "show_registration_prompt": True,
+                "subscription_email": email,
+                "subscription_topic": topic
+            }
         )
 
 
@@ -300,7 +375,7 @@ async def login_page(
     if current_user:
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(
-        "simple_login.html", 
+        "login.html", 
         {"request": request, "current_user": current_user}
     )
 
@@ -318,7 +393,7 @@ async def login_submit(
     if not user:
         flash(request, "Invalid email or password", "danger")
         return templates.TemplateResponse(
-            "simple_login.html", 
+            "login.html", 
             {"request": request, "current_user": None}
         )
     
@@ -345,14 +420,15 @@ async def login_submit(
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(
     request: Request, 
+    email: str = None,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Registration page"""
     if current_user:
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(
-        "simple_register.html", 
-        {"request": request, "current_user": current_user}
+        "register.html", 
+        {"request": request, "current_user": current_user, "prefill_email": email}
     )
 
 
@@ -369,14 +445,14 @@ async def register_submit(
     if not email or not password:
         flash(request, "Email and password are required", "danger")
         return templates.TemplateResponse(
-            "simple_register.html", 
+            "register.html", 
             {"request": request, "current_user": None}
         )
     
     if password != confirm_password:
         flash(request, "Passwords do not match", "danger")
         return templates.TemplateResponse(
-            "simple_register.html", 
+            "register.html", 
             {"request": request, "current_user": None}
         )
     
@@ -385,7 +461,7 @@ async def register_submit(
     if user:
         flash(request, "Email already registered", "danger")
         return templates.TemplateResponse(
-            "simple_register.html", 
+            "register.html", 
             {"request": request, "current_user": None}
         )
     
@@ -453,8 +529,29 @@ async def dashboard(
     # Get user's subscriptions
     subscriptions = db.query(Subscription).filter(Subscription.user_id == current_user.id).all()
     
+    # Convert last_sent times from UTC to each subscription's timezone
+    from datetime import datetime
+    import pytz
+    
+    for subscription in subscriptions:
+        if subscription.last_sent:
+            # The last_sent is stored in UTC
+            utc_time = subscription.last_sent.replace(tzinfo=pytz.UTC)
+            
+            try:
+                # Convert to subscription's timezone
+                local_tz = pytz.timezone(subscription.timezone)
+                local_time = utc_time.astimezone(local_tz)
+                
+                # Store the converted time for display
+                subscription.local_last_sent = local_time
+            except Exception as e:
+                logger.error(f"Error converting timezone: {e}")
+                # If conversion fails, just use UTC time
+                subscription.local_last_sent = utc_time
+    
     return templates.TemplateResponse(
-        "simple_dashboard.html", 
+        "dashboard.html", 
         {
             "request": request, 
             "current_user": current_user,
@@ -522,6 +619,22 @@ async def edit_subscription_submit(
     
     # Update fields
     if topic:
+        # Validate topic
+        template_context = {
+            "request": request, 
+            "current_user": current_user,
+            "subscription": subscription
+        }
+        invalid_response = validate_topic(
+            topic, 
+            request, 
+            current_user, 
+            "edit_subscription.html", 
+            template_context
+        )
+        if invalid_response:
+            return invalid_response
+        
         subscription.topic = topic
         
     if preferred_time:
@@ -581,11 +694,150 @@ async def delete_subscription(
     from app.services.scheduler import remove_email_job
     remove_email_job(subscription.id)
     
-    # Delete subscription
-    db.delete(subscription)
-    db.commit()
+    try:
+        # Delete email history records first to avoid foreign key constraint issues
+        from app.db.models import EmailHistory
+        
+        # Delete all related email history records
+        db.query(EmailHistory).filter(EmailHistory.subscription_id == subscription.id).delete()
+        
+        # Then delete the subscription
+        db.delete(subscription)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting subscription: {str(e)}")
+        flash(request, f"Error deleting subscription: {str(e)}", "danger")
+        return RedirectResponse(url="/dashboard", status_code=303)
     
     flash(request, "Subscription deleted successfully", "success")
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@app.post("/bulk-subscription-action")
+async def bulk_subscription_action(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Handle bulk actions on subscriptions"""
+    if not current_user:
+        flash(request, "Please log in to manage subscriptions", "warning")
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Get form data
+    form_data = await request.form()
+    action = form_data.get("action")
+    subscription_ids = form_data.getlist("subscription_ids")
+    
+    if not action or not subscription_ids:
+        flash(request, "No action or subscriptions selected", "warning")
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    # Convert subscription IDs to integers
+    try:
+        subscription_ids = [int(id) for id in subscription_ids]
+    except ValueError:
+        flash(request, "Invalid subscription selection", "danger")
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    # Get subscriptions that belong to the current user
+    subscriptions = db.query(Subscription).filter(
+        Subscription.id.in_(subscription_ids),
+        Subscription.user_id == current_user.id
+    ).all()
+    
+    if not subscriptions:
+        flash(request, "No valid subscriptions selected", "warning")
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    # Process based on action
+    from app.services.scheduler import remove_email_job, add_email_job
+    count = len(subscriptions)
+    
+    if action == "delete":
+        # Check for confirmation
+        if not form_data.get("confirm_delete"):
+            flash(request, "Please confirm deletion", "warning")
+            return RedirectResponse(url="/dashboard", status_code=303)
+        
+        # Remove scheduler jobs and delete subscriptions
+        try:
+            from app.db.models import EmailHistory
+            
+            for subscription in subscriptions:
+                # Remove scheduler job
+                remove_email_job(subscription.id)
+                
+                # Delete email history records for this subscription
+                db.query(EmailHistory).filter(EmailHistory.subscription_id == subscription.id).delete()
+                
+                # Delete the subscription
+                db.delete(subscription)
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error performing bulk deletion: {str(e)}")
+            flash(request, f"Error deleting subscriptions: {str(e)}", "danger")
+            return RedirectResponse(url="/dashboard", status_code=303)
+        flash(request, f"Successfully deleted {count} subscriptions", "success")
+    
+    elif action == "change_time":
+        preferred_time = form_data.get("preferred_time")
+        if not preferred_time:
+            flash(request, "Please provide a new delivery time", "warning")
+            return RedirectResponse(url="/dashboard", status_code=303)
+        
+        try:
+            # Parse time string
+            from datetime import datetime
+            time_parts = preferred_time.split(":")
+            hour = int(time_parts[0])
+            minute = int(time_parts[1])
+            preferred_time_obj = datetime.now().replace(hour=hour, minute=minute).time()
+            
+            # Update subscriptions
+            for subscription in subscriptions:
+                # Remove old job first
+                remove_email_job(subscription.id)
+                
+                # Update time
+                subscription.preferred_time = preferred_time_obj
+                
+                # Add new job
+                add_email_job(subscription)
+            
+            db.commit()
+            flash(request, f"Successfully updated delivery time for {count} subscriptions", "success")
+        
+        except (ValueError, IndexError) as e:
+            logger.error(f"Error updating time: {str(e)}")
+            flash(request, "Invalid time format", "danger")
+    
+    elif action == "change_timezone":
+        timezone = form_data.get("timezone")
+        if not timezone:
+            flash(request, "Please provide a new timezone", "warning")
+            return RedirectResponse(url="/dashboard", status_code=303)
+        
+        # Update subscriptions
+        for subscription in subscriptions:
+            # Remove old job first
+            remove_email_job(subscription.id)
+            
+            # Update timezone
+            subscription.timezone = timezone
+            
+            # Add new job
+            add_email_job(subscription)
+        
+        db.commit()
+        flash(request, f"Successfully updated timezone for {count} subscriptions", "success")
+    
+    else:
+        flash(request, "Unknown action", "danger")
+    
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
@@ -675,6 +927,7 @@ async def direct_test_email(
         logger.info(f"From email: {settings.SENDGRID_FROM_EMAIL}")
         
         # Try to create and send a simple message
+        # Use just the email address to avoid spam filters
         message = Mail(
             from_email=settings.SENDGRID_FROM_EMAIL,
             to_emails=email,

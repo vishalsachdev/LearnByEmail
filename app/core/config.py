@@ -42,7 +42,8 @@ class Settings(BaseSettings):
     GMAIL_USERNAME: Optional[str] = os.getenv("GMAIL_USERNAME")
     GMAIL_APP_PASSWORD: Optional[str] = os.getenv("GMAIL_APP_PASSWORD")
     SENDGRID_API_KEY: Optional[str] = os.getenv("SENDGRID_API_KEY")
-    SENDGRID_FROM_EMAIL: Optional[str] = os.getenv("SENDGRID_FROM_EMAIL", "noreply@learnbyemail.com")
+    SENDGRID_FROM_EMAIL: Optional[str] = os.getenv("SENDGRID_FROM_EMAIL", "learning@learnbyemail.com")
+    SENDGRID_FROM_NAME: Optional[str] = os.getenv("SENDGRID_FROM_NAME", "LearnByEmail")
     
     # Content generation
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")

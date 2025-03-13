@@ -48,6 +48,7 @@ async def check_email_credentials():
 async def create_html_email(subject, content, to_email, email_type="educational"):
     """Create HTML email message"""
     from_email, _ = await check_email_credentials()
+    
     msg = MIMEMultipart()
     msg['From'] = from_email
     msg['Subject'] = subject
@@ -126,7 +127,9 @@ async def send_via_sendgrid(to_email, subject, html_content):
             logger.error("SENDGRID_API_KEY not set")
             return False
 
+        # Just use the email address without a fancy display name to avoid spam filters
         from_email = settings.SENDGRID_FROM_EMAIL
+        
         logger.info(f"Attempting to send email via SendGrid from {from_email} to {to_email}")
         logger.info(f"Subject: {subject}")
         logger.info(f"SendGrid API Key length: {len(sendgrid_key) if sendgrid_key else 0}")
@@ -296,6 +299,19 @@ async def send_educational_email_task(subscription_id: int):
         # Include lesson sequence number for continuity
         lesson_badge = f"""<div style="display: inline-block; background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; margin-bottom: 15px;">Lesson #{sequence_number}</div>"""
         
+        # Create registration CTA for users without accounts
+        registration_cta = ""
+        if not subscription.user_id:
+            registration_cta = f"""
+            <!-- Registration CTA for users without accounts -->
+            <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #4285f4; border-radius: 4px;">
+                <h3 style="color: #4285f4; margin-top: 0;">Manage Your Learning Experience</h3>
+                <p>Want to manage your subscriptions, adjust delivery times, or subscribe to more topics?</p>
+                <p><a href="{settings.BASE_URL}/register?email={subscription.email}" style="display: inline-block; background-color: #4285f4; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold;">Create Your Free Account</a></p>
+                <p style="font-size: 0.9em; color: #666;">With an account, you can easily manage all your educational subscriptions in one place.</p>
+            </div>
+            """
+        
         html_content = f"""
         <div style="max-width: 600px; margin: 0 auto;">
             {lesson_badge}
@@ -305,6 +321,8 @@ async def send_educational_email_task(subscription_id: int):
                 <p>This is lesson #{sequence_number} in your {subscription.topic} learning journey.</p>
                 <p>Want to explore this topic further? <a href="https://chat.openai.com/chat?prompt=Teach%20me%20more%20about%20{topic_url_encoded}%20building%20upon%20this%20lesson:%20{content_preview}">Discuss this lesson with an AI tutor</a></p>
             </div>
+            
+            {registration_cta}
         </div>
         """
         

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - LearningPulse{% endblock %}
+{% block title %}Dashboard - LearnByEmail{% endblock %}
 
 {% block content %}
 <div class="row mt-4">
@@ -14,12 +14,13 @@
                     <p>You don't have any subscriptions yet. <a href="{{ url_for('home') }}">Subscribe to a topic</a> to get started!</p>
                 </div>
                 {% else %}
+
                 <!-- Table for medium screens and up (hidden on small screens) -->
                 <div class="table-responsive d-none d-md-block">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Topic</th>
+                                                <th>Topic</th>
                                 <th>Email</th>
                                 <th>Delivery Time</th>
                                 <th>Timezone</th>
@@ -36,7 +37,7 @@
                                 <td>{{ subscription.timezone }}</td>
                                 <td>
                                     {% if subscription.last_sent %}
-                                    {{ subscription.last_sent.strftime('%Y-%m-%d %H:%M') }}
+                                    {{ subscription.local_last_sent.strftime('%H:%M') }} on {{ subscription.local_last_sent.strftime('%Y-%m-%d') }}
                                     {% else %}
                                     Not sent yet
                                     {% endif %}
@@ -64,7 +65,9 @@
                         <div class="col-12 mb-3">
                             <div class="card subscription-card">
                                 <div class="card-body">
-                                    <h5 class="card-title mb-3">{{ subscription.topic }}</h5>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title mb-0">{{ subscription.topic }}</h5>
+                                    </div>
                                     <div class="subscription-details">
                                         <p class="mb-1"><i class="fas fa-envelope me-2"></i> {{ subscription.email }}</p>
                                         <p class="mb-1"><i class="fas fa-clock me-2"></i> {{ subscription.preferred_time.strftime('%H:%M') }}</p>
@@ -72,7 +75,7 @@
                                         <p class="mb-3">
                                             <i class="fas fa-paper-plane me-2"></i> 
                                             {% if subscription.last_sent %}
-                                            {{ subscription.last_sent.strftime('%Y-%m-%d %H:%M') }}
+                                            {{ subscription.local_last_sent.strftime('%H:%M') }} on {{ subscription.local_last_sent.strftime('%Y-%m-%d') }}
                                             {% else %}
                                             Not sent yet
                                             {% endif %}

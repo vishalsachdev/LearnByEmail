@@ -87,12 +87,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Live validation for topic
         if (topicInput) {
             topicInput.addEventListener('input', function() {
-                if (!this.value) {
+                const topic = this.value.trim();
+                if (!topic) {
                     showValidationMessage(this, 'Please enter a topic');
-                } else if (this.value.length < 2) {
-                    showValidationMessage(this, 'Topic is too short (minimum 2 characters)');
-                } else if (this.value.length > 100) {
-                    showValidationMessage(this, 'Topic is too long (maximum 100 characters)');
+                } else if (topic.length < 3) {
+                    showValidationMessage(this, 'Topic is too short (minimum 3 characters)');
+                } else if (topic.length > 50) {
+                    showValidationMessage(this, 'Topic is too long (maximum 50 characters)');
+                } else if (!topic.match(/^[A-Za-z0-9\s\-_,.&+\'()]+$/)) {
+                    showValidationMessage(this, 'Topic contains invalid characters. Please use only letters, numbers, spaces, and common punctuation.');
                 } else {
                     showValidationMessage(this, 'Topic looks good', false);
                 }
@@ -101,14 +104,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Form submission validation
         subscriptionForm.addEventListener('submit', function(event) {
-            const topic = topicInput.value;
+            const topic = topicInput.value.trim();
             let isValid = true;
             
             if (!topic) {
                 showValidationMessage(topicInput, 'Please enter a topic');
                 isValid = false;
-            } else if (topic.length < 2 || topic.length > 100) {
-                showValidationMessage(topicInput, 'Topic must be between 2-100 characters');
+            } else if (topic.length < 3) {
+                showValidationMessage(topicInput, 'Topic is too short (minimum 3 characters)');
+                isValid = false;
+            } else if (topic.length > 50) {
+                showValidationMessage(topicInput, 'Topic is too long (maximum 50 characters)');
+                isValid = false;
+            } else if (!topic.match(/^[A-Za-z0-9\s\-_,.&+\'()]+$/)) {
+                showValidationMessage(topicInput, 'Topic contains invalid characters. Please use only letters, numbers, spaces, and common punctuation.');
                 isValid = false;
             }
             

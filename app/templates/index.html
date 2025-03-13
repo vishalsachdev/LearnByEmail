@@ -3,6 +3,35 @@
 {% block title %}LearnByEmail - Daily Educational Content{% endblock %}
 
 {% block content %}
+{% if show_registration_prompt %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card bg-light border-success">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="text-success"><i class="fas fa-check-circle me-2"></i>Successfully Subscribed!</h3>
+                        <p class="mb-1">Your first email about <strong>{{ subscription_topic }}</strong> is on its way to <strong>{{ subscription_email }}</strong>.</p>
+                        <p class="lead">Create an account to manage all your subscriptions in one place:</p>
+                        <ul>
+                            <li>Manage multiple topic subscriptions</li>
+                            <li>Adjust delivery times and preferences</li>
+                            <li>Pause or resume subscriptions</li>
+                            <li>Track your learning progress</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <a href="/register?email={{ subscription_email }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-plus me-2"></i> Create Your Account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mt-4">
     <div class="col-md-6">
         <div class="card">
