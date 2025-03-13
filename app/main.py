@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import asyncio
 from starlette.middleware.sessions import SessionMiddleware
 import re
+import urllib.parse
 
 from app.core.config import settings
 from app.db.session import get_db, engine
@@ -107,6 +108,8 @@ def url_for(name: str, **path_params) -> str:
         "home": "/",
         "login": "/login",
         "register": "/register",
+        "register_page": "/register",
+        "register_submit": "/register",
         "dashboard": "/dashboard",
         "logout": "/logout",
         "subscribe": "/subscribe",
@@ -150,6 +153,7 @@ def get_flashed_messages_wrapper(with_categories=False):
 # Add custom functions to Jinja2 templates
 templates.env.globals["get_flashed_messages"] = get_flashed_messages_wrapper
 templates.env.globals["url_for"] = url_for
+templates.env.filters["urlencode"] = lambda u: urllib.parse.quote(u)
 
 
 # Include API routers
@@ -347,7 +351,7 @@ async def subscribe(
         flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly.", "success")
     else:
         # Enhanced message for non-logged in users with registration prompt
-        flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly. <a href='/register?email={email}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences.", "success")
+        flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly. <a href='/register?email={urllib.parse.quote(email)}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences.", "success")
     
     # Always redirect to dashboard if logged in, otherwise show index page
     if current_user:
