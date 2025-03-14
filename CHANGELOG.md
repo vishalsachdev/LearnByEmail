@@ -6,7 +6,16 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ### 2025-03-14
 
-1. **Difficulty Level Implementation**
+1. **Type System Improvements**
+   - Fixed type checking errors throughout the application
+   - Added proper typing for SQLAlchemy Column objects
+   - Fixed AnyHttpUrl validator in config.py
+   - Used SQLAlchemy update() method for safer attribute assignment
+   - Added better error handling for UploadFile objects
+   - Added mypy configuration with pyproject.toml
+   - Fixed JWTError imports and typing issues
+
+2. **Difficulty Level Implementation**
    - Added difficulty column to subscription database model
    - Created migration script for database schema update
    - Updated subscription forms to include difficulty selection (Beginner/Intermediate/Advanced)
