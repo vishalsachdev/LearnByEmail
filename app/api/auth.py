@@ -106,14 +106,18 @@ async def forgot_password(
     
     # Generate and store reset token for the user
     reset_token = generate_reset_token()
-    user.reset_token = reset_token
-    user.reset_token_expires = get_reset_token_expiry()
+    
+    # Update user data with SQLAlchemy updates for type safety
+    db.query(User).filter(User.id == user.id).update({
+        "reset_token": reset_token,
+        "reset_token_expires": get_reset_token_expiry()
+    })
     db.commit()
     
     # Send password reset email in background
     background_tasks.add_task(
         send_password_reset_email,
-        email=user.email,
+        email=str(user.email),
         token=reset_token
     )
     
@@ -153,10 +157,13 @@ async def reset_password(
             detail="Reset token expired",
         )
     
-    # Update password and clear token
-    user.password_hash = User.get_password_hash(reset_data.password)
-    user.reset_token = None
-    user.reset_token_expires = None
+    # Update password and clear token using SQLAlchemy update
+    new_password_hash = User.get_password_hash(reset_data.password)
+    db.query(User).filter(User.id == user.id).update({
+        "password_hash": new_password_hash,
+        "reset_token": None,
+        "reset_token_expires": None
+    })
     db.commit()
     db.refresh(user)
     

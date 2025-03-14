@@ -4,7 +4,7 @@ import secrets
 import logging
 import uuid
 
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from fastapi import Depends, FastAPI, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2
@@ -66,7 +66,7 @@ async def get_current_user(
                 detail="Token expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    except (jwt.JWTError, ValidationError):
+    except (JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -116,7 +116,7 @@ async def get_current_user_optional(
         
         if datetime.fromtimestamp(token_data.exp) < datetime.now():
             return None
-    except (jwt.JWTError, ValidationError):
+    except (JWTError, ValidationError):
         return None
         
     user = db.query(User).filter(User.email == token_data.sub).first()
@@ -130,7 +130,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[Any]:
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
-    if not verify_password(password, user.password_hash):
+    if not verify_password(password, str(user.password_hash)):
         return None
     return user
 

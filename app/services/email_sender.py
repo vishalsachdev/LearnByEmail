@@ -284,10 +284,10 @@ async def send_educational_email_task(subscription_id: int):
         logger.info(f"Generating content for subscription {subscription_id}, lesson #{sequence_number} with {len(previous_contents)} previous lessons as context")
         
         # Generate content with difficulty level
-        difficulty = subscription.difficulty or "medium"  # Use 'medium' as fallback if None
+        difficulty = str(subscription.difficulty or "medium")  # Use 'medium' as fallback if None
         content = await generate_educational_content(
-            topic=subscription.topic,
-            previous_contents=previous_contents,
+            topic=str(subscription.topic),
+            previous_contents=[str(c) for c in previous_contents] if previous_contents else None,
             difficulty=difficulty
         )
         if not content:
@@ -295,7 +295,7 @@ async def send_educational_email_task(subscription_id: int):
             return False
         
         # Format HTML content for email with lesson number
-        topic_url_encoded = urllib.parse.quote(subscription.topic)
+        topic_url_encoded = urllib.parse.quote(str(subscription.topic))
         
         # Create a plain text version of the content for ChatGPT by extracting just the title
         import re
@@ -379,7 +379,9 @@ async def send_educational_email_task(subscription_id: int):
             history = EmailHistory(subscription_id=subscription.id, content=content)
             db.add(history)
             
-            subscription.last_sent = datetime.utcnow()
+            # Update the last sent time - needs explicit update for SQLAlchemy Column type
+            db.query(Subscription).filter(Subscription.id == subscription.id).update(
+                {"last_sent": datetime.utcnow()})
             db.commit()
             logger.info(f"Successfully sent email to {subscription.email}")
             return True

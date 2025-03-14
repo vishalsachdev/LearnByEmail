@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 import os
 from pydantic_settings import BaseSettings
 from pydantic import AnyHttpUrl, validator
@@ -11,7 +11,7 @@ is_replit = load_environment_variables()
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LearnByEmail"
     API_V1_STR: str = "/api/v1"
-    API_SECRET_KEY: str
+    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "")
     BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
     
     @property
@@ -35,11 +35,13 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: str | List[str]) -> List[AnyHttpUrl]:
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[AnyHttpUrl]:
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
+            return [AnyHttpUrl(i.strip()) for i in v.split(",")]
+        elif isinstance(v, list):
+            return [AnyHttpUrl(i) for i in v]
+        elif isinstance(v, str):
+            return [AnyHttpUrl(v)]
         raise ValueError(v)
     
     # Email settings

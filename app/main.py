@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import logging
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, Union
 from datetime import datetime, timedelta
 import asyncio
 from starlette.middleware.sessions import SessionMiddleware
@@ -393,7 +393,7 @@ async def subscribe(
     try:
         # Use background_tasks to handle the asyncio coroutine properly
         background_tasks = BackgroundTasks()
-        background_tasks.add_task(send_educational_email_task, subscription.id)
+        background_tasks.add_task(send_educational_email_task, int(subscription.id))
         logger.info(f"Scheduled immediate welcome email for new subscription {subscription.id} to {email}")
     except Exception as e:
         logger.error(f"Error scheduling welcome email: {str(e)}")
@@ -476,7 +476,7 @@ async def login_submit(
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(
     request: Request, 
-    email: str = None,
+    email: Optional[str] = None,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Registration page"""
@@ -559,7 +559,7 @@ async def forgot_password_page(
 @app.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(
     request: Request,
-    token: str = None,
+    token: Optional[str] = None,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Reset password page"""
@@ -596,7 +596,7 @@ async def dashboard(
             
             try:
                 # Convert to subscription's timezone
-                local_tz = pytz.timezone(subscription.timezone)
+                local_tz = pytz.timezone(str(subscription.timezone))
                 local_time = utc_time.astimezone(local_tz)
                 
                 # Store the converted time for display
@@ -691,14 +691,19 @@ async def edit_subscription_submit(
         if invalid_response:
             return invalid_response
         
-        subscription.topic = topic
+        db.query(Subscription).filter(Subscription.id == subscription.id).update(
+            {"topic": topic}
+        )
         
     if preferred_time:
         try:
             time_parts = preferred_time.split(":")
             hour = int(time_parts[0])
             minute = int(time_parts[1])
-            subscription.preferred_time = datetime.now().replace(hour=hour, minute=minute).time()
+            new_time = datetime.now().replace(hour=hour, minute=minute).time()
+            db.query(Subscription).filter(Subscription.id == subscription.id).update(
+                {"preferred_time": new_time}
+            )
         except (ValueError, IndexError):
             flash(request, "Invalid time format", "danger")
             return templates.TemplateResponse(
@@ -711,13 +716,15 @@ async def edit_subscription_submit(
             )
     
     if timezone:
-        subscription.timezone = timezone
+        db.query(Subscription).filter(Subscription.id == subscription.id).update(
+            {"timezone": timezone}
+        )
     
     db.commit()
     
     # Update scheduler job
     from app.services.scheduler import remove_email_job, add_email_job
-    remove_email_job(subscription.id)
+    remove_email_job(int(subscription.id))
     add_email_job(subscription)
     
     flash(request, "Subscription updated successfully", "success")
@@ -748,7 +755,7 @@ async def delete_subscription(
     
     # Remove scheduler job
     from app.services.scheduler import remove_email_job
-    remove_email_job(subscription.id)
+    remove_email_job(int(subscription.id))
     
     try:
         # Delete email history records first to avoid foreign key constraint issues
@@ -792,14 +799,29 @@ async def bulk_subscription_action(
     
     # Convert subscription IDs to integers
     try:
-        subscription_ids = [int(id) for id in subscription_ids]
+        # Convert list items to integers, handling UploadFile objects if present
+        int_subscription_ids: List[int] = []
+        for id_item in subscription_ids:
+            if hasattr(id_item, 'strip'):  # Check if it's a string
+                int_subscription_ids.append(int(id_item))
+            else:
+                # Handle other types as needed (like UploadFile)
+                # First convert to string safely, then to int
+                try:
+                    string_value = str(id_item)
+                    int_subscription_ids.append(int(string_value))
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert value to int: {id_item}")
+                    # Skip invalid values
+        # Create a new variable with the proper type
+        id_list = int_subscription_ids
     except ValueError:
         flash(request, "Invalid subscription selection", "danger")
         return RedirectResponse(url="/dashboard", status_code=303)
     
     # Get subscriptions that belong to the current user
     subscriptions = db.query(Subscription).filter(
-        Subscription.id.in_(subscription_ids),
+        Subscription.id.in_(id_list),
         Subscription.user_id == current_user.id
     ).all()
     
@@ -823,7 +845,7 @@ async def bulk_subscription_action(
             
             for subscription in subscriptions:
                 # Remove scheduler job
-                remove_email_job(subscription.id)
+                remove_email_job(int(subscription.id))
                 
                 # Delete email history records for this subscription
                 db.query(EmailHistory).filter(EmailHistory.subscription_id == subscription.id).delete()
@@ -844,11 +866,17 @@ async def bulk_subscription_action(
         if not preferred_time:
             flash(request, "Please provide a new delivery time", "warning")
             return RedirectResponse(url="/dashboard", status_code=303)
+            
+        # Handle UploadFile or string
+        if hasattr(preferred_time, 'read'):  # It's an UploadFile
+            preferred_time_str = str(preferred_time)
+        else:
+            preferred_time_str = preferred_time
         
         try:
             # Parse time string
             from datetime import datetime
-            time_parts = preferred_time.split(":")
+            time_parts = preferred_time_str.split(":")
             hour = int(time_parts[0])
             minute = int(time_parts[1])
             preferred_time_obj = datetime.now().replace(hour=hour, minute=minute).time()
@@ -856,10 +884,12 @@ async def bulk_subscription_action(
             # Update subscriptions
             for subscription in subscriptions:
                 # Remove old job first
-                remove_email_job(subscription.id)
+                remove_email_job(int(subscription.id))
                 
-                # Update time
-                subscription.preferred_time = preferred_time_obj
+                # Update time using a query to avoid type issues
+                db.query(Subscription).filter(Subscription.id == subscription.id).update(
+                    {"preferred_time": preferred_time_obj}
+                )
                 
                 # Add new job
                 add_email_job(subscription)
@@ -876,14 +906,22 @@ async def bulk_subscription_action(
         if not timezone:
             flash(request, "Please provide a new timezone", "warning")
             return RedirectResponse(url="/dashboard", status_code=303)
+            
+        # Handle UploadFile or string
+        if hasattr(timezone, 'read'):  # It's an UploadFile
+            timezone_str = str(timezone)
+        else:
+            timezone_str = timezone
         
         # Update subscriptions
         for subscription in subscriptions:
             # Remove old job first
-            remove_email_job(subscription.id)
+            remove_email_job(int(subscription.id))
             
             # Update timezone
-            subscription.timezone = timezone
+            db.query(Subscription).filter(Subscription.id == subscription.id).update(
+                {"timezone": timezone_str}
+            )
             
             # Add new job
             add_email_job(subscription)
@@ -930,7 +968,7 @@ async def test_email(
         from app.core.config import settings
         
         # Use background tasks to properly handle the async operation
-        background_tasks.add_task(send_educational_email_task, subscription.id)
+        background_tasks.add_task(send_educational_email_task, int(subscription.id))
         flash(request, "Test email sending initiated. Check your inbox shortly!", "success")
     except Exception as e:
         logger.error(f"Error in test email route: {type(e).__name__}: {str(e)}")

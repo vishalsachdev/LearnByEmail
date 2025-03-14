@@ -87,7 +87,7 @@ async def create_subscription(
     
     try:
         # Use background_tasks to send the welcome email asynchronously
-        background_tasks.add_task(send_educational_email_task, subscription.id)
+        background_tasks.add_task(send_educational_email_task, int(subscription.id))
         logger.info(f"Scheduled immediate welcome email for new API subscription {subscription.id} to {subscription.email}")
     except Exception as e:
         logger.error(f"Error scheduling welcome email for API subscription: {str(e)}")
@@ -149,7 +149,7 @@ async def update_subscription(
     db.refresh(subscription)
     
     # Update the email job
-    remove_email_job(subscription.id)
+    remove_email_job(int(subscription.id))
     add_email_job(subscription)
     
     return subscription
@@ -177,7 +177,7 @@ async def delete_subscription(
         )
     
     # Remove the email job first
-    remove_email_job(subscription.id)
+    remove_email_job(int(subscription.id))
     
     # Delete the subscription
     db.delete(subscription)

@@ -99,7 +99,7 @@ def add_email_job(subscription: Subscription):
         args=[subscription.id],
         id=job_id,
         replace_existing=True,
-        timezone=pytz.timezone(subscription.timezone)
+        timezone=pytz.timezone(str(subscription.timezone))
     )
     
     logger.info(f"Scheduled email job for subscription {subscription.id} at {subscription.preferred_time} {subscription.timezone}")
