@@ -61,6 +61,10 @@ async def create_subscription(
             detail=f"You already have a subscription for {subscription_in.topic}",
         )
     
+    # Validate difficulty level
+    if subscription_in.difficulty not in ["easy", "medium", "hard"]:
+        subscription_in.difficulty = "medium"  # Default to medium if invalid
+    
     # Create subscription
     subscription = Subscription(
         **subscription_in.model_dump(),

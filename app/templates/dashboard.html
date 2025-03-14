@@ -20,8 +20,9 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                                <th>Topic</th>
+                                <th>Topic</th>
                                 <th>Email</th>
+                                <th>Difficulty</th>
                                 <th>Delivery Time</th>
                                 <th>Timezone</th>
                                 <th>Last Sent</th>
@@ -33,6 +34,14 @@
                             <tr>
                                 <td>{{ subscription.topic }}</td>
                                 <td>{{ subscription.email }}</td>
+                                <td>
+                                    <span class="badge {% if subscription.difficulty == 'easy' %}bg-success{% elif subscription.difficulty == 'medium' %}bg-primary{% elif subscription.difficulty == 'hard' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {% if subscription.difficulty == 'easy' %}Beginner
+                                        {% elif subscription.difficulty == 'medium' %}Intermediate
+                                        {% elif subscription.difficulty == 'hard' %}Advanced
+                                        {% else %}{{ subscription.difficulty|capitalize }}{% endif %}
+                                    </span>
+                                </td>
                                 <td>{{ subscription.preferred_time.strftime('%H:%M') }}</td>
                                 <td>{{ subscription.timezone }}</td>
                                 <td>
@@ -70,6 +79,15 @@
                                     </div>
                                     <div class="subscription-details">
                                         <p class="mb-1"><i class="fas fa-envelope me-2"></i> {{ subscription.email }}</p>
+                                        <p class="mb-1">
+                                            <i class="fas fa-graduation-cap me-2"></i> 
+                                            <span class="badge {% if subscription.difficulty == 'easy' %}bg-success{% elif subscription.difficulty == 'medium' %}bg-primary{% elif subscription.difficulty == 'hard' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                {% if subscription.difficulty == 'easy' %}Beginner
+                                                {% elif subscription.difficulty == 'medium' %}Intermediate
+                                                {% elif subscription.difficulty == 'hard' %}Advanced
+                                                {% else %}{{ subscription.difficulty|capitalize }}{% endif %}
+                                            </span>
+                                        </p>
                                         <p class="mb-1"><i class="fas fa-clock me-2"></i> {{ subscription.preferred_time.strftime('%H:%M') }}</p>
                                         <p class="mb-1"><i class="fas fa-globe me-2"></i> {{ subscription.timezone }}</p>
                                         <p class="mb-3">
@@ -133,11 +151,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-3 mb-4">
+                        <div class="col-12 col-sm-6 col-md-2 mb-4">
                             <label for="preferred_time" class="form-label">Preferred Time</label>
                             <input type="time" class="form-control" id="preferred_time" name="preferred_time" required>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-3 mb-4">
+                        <div class="col-12 col-sm-6 col-md-2 mb-4">
+                            <label for="difficulty" class="form-label">Difficulty Level</label>
+                            <select class="form-select" id="difficulty" name="difficulty" required>
+                                <option value="easy">Beginner</option>
+                                <option value="medium" selected>Intermediate</option>
+                                <option value="hard">Advanced</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2 mb-4">
                             <label for="timezone" class="form-label">Timezone</label>
                             <select class="form-select" id="timezone" name="timezone" required>
                                 <option value="America/New_York">Eastern Time (ET)</option>

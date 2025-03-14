@@ -34,6 +34,7 @@ class Subscription(Base):
     topic = Column(String(200), nullable=False)
     preferred_time = Column(Time, nullable=False)
     timezone = Column(String(50), nullable=False)
+    difficulty = Column(String(10), default="medium", nullable=False)  # 'easy', 'medium', 'hard'
     created_at = Column(DateTime, default=datetime.utcnow)
     last_sent = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

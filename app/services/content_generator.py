@@ -16,16 +16,14 @@ async def setup_gemini():
         logger.error("GEMINI_API_KEY environment variable is not set")
         raise ValueError("GEMINI_API_KEY environment variable is not set")
     
-    logger.info(f"Configuring Gemini with API key (length: {len(api_key)})")
+    logger.info("Configuring Gemini API")
     genai.configure(api_key=api_key)
     
     try:
-        # Try to list available models first
-        logger.info("Listing available models...")
+        # Get available models
         try:
             available_models = genai.list_models()
             model_names = [m.name for m in available_models]
-            logger.info(f"Available models: {model_names}")
         except Exception as e:
             logger.warning(f"Could not list available models: {str(e)}")
             model_names = []
@@ -59,7 +57,7 @@ async def setup_gemini():
                 'gemini-pro'
             ]
         
-        logger.info(f"Models to try in order: {possible_models}")
+        # Try models in order of preference
         
         # Try each model until one works
         last_error = None
@@ -67,9 +65,8 @@ async def setup_gemini():
             try:
                 # Strip 'models/' prefix if present when creating the model
                 model_id = model_name.replace('models/', '') if model_name.startswith('models/') else model_name
-                logger.info(f"Trying model {model_name} with ID: {model_id}")
                 model = genai.GenerativeModel(model_id)
-                logger.info(f"Successfully initialized Gemini model: {model_name}")
+                logger.info(f"Successfully initialized Gemini model: {model_id}")
                 return model
             except Exception as e:
                 last_error = e
@@ -140,8 +137,7 @@ async def generate_educational_content(topic: str, previous_contents: Optional[L
                 logger.warning("Invalid previous_contents format provided")
                 history_context = ""
                 
-        # Log the size of context being used
-        logger.info(f"Using {len(history_context)} characters of historical context")
+        # Use historical context to build continuity
 
         # Adjust content length based on preview mode
         length_instruction = "concise and brief" if is_preview else "concise but informative"
@@ -211,10 +207,8 @@ IMPORTANT FORMATTING GUIDELINES:
 Keep the language friendly and engaging, and ensure each section is {length_instruction}."""
 
         # Generate content
-        logger.debug(f"Sending prompt to Gemini API for sanitized topic: {sanitized_topic}")
         response = await asyncio.to_thread(model.generate_content, prompt)
         content = response.text
-        logger.debug("Successfully received response from Gemini API")
 
         # Format the content with HTML
         

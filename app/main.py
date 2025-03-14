@@ -23,7 +23,7 @@ from app.core.security import get_current_user_optional, authenticate_user, crea
 import os
 log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app.log")
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file),
@@ -926,10 +926,8 @@ async def test_email(
         from app.services.email_sender import send_educational_email_task
         logger.info(f"Attempting to send test email for subscription {subscription_id} to {subscription.email}")
         
-        # Check environment variables
+        # Run task in background
         from app.core.config import settings
-        logger.info(f"Using configuration: SENDGRID_API_KEY set: {'Yes' if settings.SENDGRID_API_KEY else 'No'}")
-        logger.info(f"Using configuration: GEMINI_API_KEY set: {'Yes' if settings.GEMINI_API_KEY else 'No'}")
         
         # Use background tasks to properly handle the async operation
         background_tasks.add_task(send_educational_email_task, subscription.id)
@@ -950,9 +948,9 @@ async def check_env():
         import os
         
         env_vars = {
-            "SENDGRID_API_KEY": f"{'Set' if settings.SENDGRID_API_KEY else 'Not Set'} (Length: {len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0})",
+            "SENDGRID_API_KEY": f"{'Set' if settings.SENDGRID_API_KEY else 'Not Set'}",
             "SENDGRID_FROM_EMAIL": settings.SENDGRID_FROM_EMAIL,
-            "GEMINI_API_KEY": f"{'Set' if settings.GEMINI_API_KEY else 'Not Set'} (Length: {len(settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY else 0})",
+            "GEMINI_API_KEY": f"{'Set' if settings.GEMINI_API_KEY else 'Not Set'}",
             "DATABASE_URL": settings.DATABASE_URL
         }
         
@@ -978,9 +976,8 @@ async def direct_test_email(
         from sendgrid.helpers.mail import Mail, Content
         from app.core.config import settings
         
-        # Log settings
-        logger.info(f"Using SendGrid key with length: {len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0}")
-        logger.info(f"From email: {settings.SENDGRID_FROM_EMAIL}")
+        # Send direct test email
+        logger.info(f"Sending direct test email to: {email}")
         
         # Try to create and send a simple message
         # Use just the email address to avoid spam filters

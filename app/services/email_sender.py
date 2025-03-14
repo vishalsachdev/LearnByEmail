@@ -29,7 +29,7 @@ async def check_email_credentials():
     # First check if SendGrid is configured
     sendgrid_key = settings.SENDGRID_API_KEY
     if sendgrid_key:
-        logger.info(f"SendGrid API key is set (length: {len(sendgrid_key)})")
+        logger.info("SendGrid API key is configured")
         return settings.SENDGRID_FROM_EMAIL, "sendgrid"
         
     # Fall back to SMTP
@@ -130,9 +130,7 @@ async def send_via_sendgrid(to_email, subject, html_content):
         # Just use the email address without a fancy display name to avoid spam filters
         from_email = settings.SENDGRID_FROM_EMAIL
         
-        logger.info(f"Attempting to send email via SendGrid from {from_email} to {to_email}")
-        logger.info(f"Subject: {subject}")
-        logger.info(f"SendGrid API Key length: {len(sendgrid_key) if sendgrid_key else 0}")
+        logger.info(f"Attempting to send email via SendGrid to {to_email}")
         
         message = Mail(
             from_email=from_email,
@@ -142,7 +140,7 @@ async def send_via_sendgrid(to_email, subject, html_content):
         )
 
         sg = SendGridAPIClient(sendgrid_key)
-        logger.info("Initialized SendGrid client, sending message...")
+        # Send message
         
         try:
             response = await asyncio.to_thread(sg.send, message)
@@ -165,7 +163,6 @@ async def send_via_sendgrid(to_email, subject, html_content):
 
     except Exception as e:
         logger.error(f"SendGrid Error: {type(e).__name__}: {str(e)}")
-        logger.error(f"SendGrid configuration: API KEY length={len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0}, FROM_EMAIL={settings.SENDGRID_FROM_EMAIL}")
         return False
 
 
@@ -286,15 +283,28 @@ async def send_educational_email_task(subscription_id: int):
         
         logger.info(f"Generating content for subscription {subscription_id}, lesson #{sequence_number} with {len(previous_contents)} previous lessons as context")
         
-        # Generate content
-        content = await generate_educational_content(subscription.topic, previous_contents)
+        # Generate content with difficulty level
+        difficulty = subscription.difficulty or "medium"  # Use 'medium' as fallback if None
+        content = await generate_educational_content(
+            topic=subscription.topic,
+            previous_contents=previous_contents,
+            difficulty=difficulty
+        )
         if not content:
             logger.error(f"Failed to generate content for {subscription.email}")
             return False
         
         # Format HTML content for email with lesson number
         topic_url_encoded = urllib.parse.quote(subscription.topic)
-        content_preview = urllib.parse.quote(content[:100])
+        
+        # Create a plain text version of the content for ChatGPT by extracting just the title
+        import re
+        title_match = re.search(r'<h2[^>]*>(.*?)</h2>', content, re.DOTALL)
+        content_title = title_match.group(1).strip() if title_match else subscription.topic
+        
+        # Use just the title for the ChatGPT prompt to avoid HTML tags
+        chatgpt_prompt = f"I just learned about {subscription.topic}: {content_title}. Can you help me understand this better?"
+        chatgpt_prompt_encoded = urllib.parse.quote(chatgpt_prompt)
         
         # Include lesson sequence number for continuity
         lesson_badge = f"""<div style="display: inline-block; background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; margin-bottom: 15px;">Lesson #{sequence_number}</div>"""
@@ -319,7 +329,7 @@ async def send_educational_email_task(subscription_id: int):
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                 <h3 style="color: #34495e;">Continue Your Learning Journey</h3>
                 <p>This is lesson #{sequence_number} in your {subscription.topic} learning journey.</p>
-                <p>Want to explore this topic further? <a href="https://chat.openai.com/chat?prompt=Teach%20me%20more%20about%20{topic_url_encoded}%20building%20upon%20this%20lesson:%20{content_preview}">Discuss this lesson with an AI tutor</a></p>
+                <p>Want to explore this topic further? <a href="https://chatgpt.com/?q={chatgpt_prompt_encoded}">Continue learning with an AI tutor</a></p>
             </div>
             
             {registration_cta}

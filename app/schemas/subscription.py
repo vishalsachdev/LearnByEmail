@@ -8,6 +8,7 @@ class SubscriptionBase(BaseModel):
     topic: str
     preferred_time: time
     timezone: str
+    difficulty: Optional[str] = "medium"  # 'easy', 'medium', 'hard'
 
 
 class SubscriptionCreate(SubscriptionBase):
@@ -18,6 +19,7 @@ class SubscriptionUpdate(BaseModel):
     topic: Optional[str] = None
     preferred_time: Optional[time] = None
     timezone: Optional[str] = None
+    difficulty: Optional[str] = None  # 'easy', 'medium', 'hard'
 
 
 class SubscriptionResponse(SubscriptionBase):

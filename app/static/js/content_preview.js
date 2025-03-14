@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event: Preview button click
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.id === 'preview-button' || e.target.closest('#preview-button')) {
+        if (e.target && (e.target.id === 'preview-button' || e.target.closest('#preview-button'))) {
             const topic = topicInput.value.trim();
             if (!topic) {
                 showMessage('Please enter a topic first', 'warning');
@@ -103,8 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 difficultyWrapper.classList.remove('d-none');
             }
             
-            // Generate preview
-            generatePreview(topic, 'medium');
+            // Get currently selected difficulty
+            const difficulty = document.getElementById('preview-difficulty')?.value || 'medium';
+            
+            // Generate preview with selected difficulty
+            generatePreview(topic, difficulty);
         }
     });
     
@@ -130,9 +133,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Event: Close preview button
+    // Event: Use event delegation for close and continue buttons
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.id === 'close-preview' || e.target.closest('#close-preview')) {
+        // Close preview button - match both the X and the "Got it" button
+        if (e.target && (e.target.id === 'close-preview' || e.target.closest('#close-preview'))) {
             closePreview();
         }
     });

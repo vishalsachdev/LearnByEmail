@@ -72,6 +72,7 @@ app/
 - Clean, card-based layout for better organization
 - Visual feedback for user actions
 - Content preview feature with difficulty selection
+- Difficulty levels (Beginner, Intermediate, Advanced) for personalized learning
 - Mobile-optimized layouts with touch-friendly controls
 - Automatic timezone detection from browser settings
 - Accessibility considerations for all users
@@ -173,6 +174,7 @@ For Replit deployment, add these same variables as Secrets in the Replit environ
 - `topic`: String
 - `preferred_time`: Time
 - `timezone`: String
+- `difficulty`: String (easy, medium, hard)
 - `created_at`: DateTime
 - `last_sent`: DateTime (nullable)
 - `user_id`: Integer foreign key
