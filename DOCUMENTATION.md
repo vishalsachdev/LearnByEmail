@@ -149,6 +149,10 @@ For Replit deployment, add these same variables as Secrets in the Replit environ
 - `POST /register`: Process registration
 - `GET /dashboard`: User dashboard
 - `POST /subscribe`: Create subscription from form
+- `GET /about`: About Us page
+- `GET /privacy`: Privacy Policy page
+- `GET /terms`: Terms of Service page
+- `GET /contact`: Contact page
 - `GET /test-email/{id}`: Test send an email immediately
 - `GET /check-env`: Display current environment configuration (debugging)
 - `GET /direct-test-email/{email}`: Send a direct test email (debugging)
@@ -268,11 +272,15 @@ The content generator will use the first available model that works with your AP
 
 ### Key Templates
 
-- `simple.html`: Landing page with feature showcase and subscription form
-- `simple_login.html`: User login page
-- `simple_register.html`: User registration with benefits list
-- `simple_dashboard.html`: User dashboard with subscription management
-- `base.html`: Template base with common styles for other templates
+- `base.html`: Template base with common styles, navigation and footer for all pages
+- `index.html`: Landing page with feature showcase and subscription form
+- `login.html`: User login page
+- `register.html`: User registration with benefits list
+- `dashboard.html`: User dashboard with subscription management
+- `about.html`: About Us page with mission statement and features
+- `privacy.html`: Privacy Policy page with data handling information
+- `terms.html`: Terms of Service page with user agreement details
+- `contact.html`: Contact page with support information and FAQ section
 
 ## Troubleshooting
 
