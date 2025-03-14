@@ -292,6 +292,7 @@ async def subscribe(
     topic: str = Form(...),
     preferred_time: str = Form(...),
     timezone: str = Form(...),
+    difficulty: str = Form(default="medium"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
@@ -371,12 +372,17 @@ async def subscribe(
                 {"request": request, "current_user": current_user}
             )
     
+    # Validate difficulty level
+    if difficulty not in ["easy", "medium", "hard"]:
+        difficulty = "medium"  # Default to medium if invalid
+    
     # Create subscription
     subscription = Subscription(
         email=email,
         topic=topic,
         preferred_time=preferred_time_obj,
         timezone=timezone,
+        difficulty=difficulty,
         user_id=user_id
     )
     
