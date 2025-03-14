@@ -661,6 +661,7 @@ async def edit_subscription_submit(
     topic: str = Form(None),
     preferred_time: str = Form(None),
     timezone: str = Form(None),
+    difficulty: str = Form(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
@@ -724,6 +725,15 @@ async def edit_subscription_submit(
     if timezone:
         db.query(Subscription).filter(Subscription.id == subscription.id).update(
             {"timezone": timezone}
+        )
+    
+    if difficulty:
+        # Validate difficulty level
+        if difficulty not in ["easy", "medium", "hard"]:
+            difficulty = "medium"  # Default to medium if invalid
+            
+        db.query(Subscription).filter(Subscription.id == subscription.id).update(
+            {"difficulty": difficulty}
         )
     
     db.commit()
