@@ -25,7 +25,9 @@ async def setup_gemini():
             available_models = genai.list_models()
             model_names = [m.name for m in available_models]
         except Exception as e:
-            logger.warning(f"Could not list available models: {str(e)}")
+            # Log only the error type, not the full error which might contain API key
+            error_type = type(e).__name__
+            logger.warning(f"Could not list available models: {error_type}")
             model_names = []
         
         # Preferred model types in order
@@ -70,7 +72,9 @@ async def setup_gemini():
                 return model
             except Exception as e:
                 last_error = e
-                logger.warning(f"Failed to initialize model {model_name}: {str(e)}")
+                # Log only model name and error type, not full exception which might expose API key
+                error_type = type(e).__name__
+                logger.warning(f"Failed to initialize model {model_name}: {error_type}")
                 continue
         
         # If we get here, no models worked
@@ -79,7 +83,10 @@ async def setup_gemini():
         else:
             raise ValueError("No Gemini models could be initialized")
     except Exception as e:
-        logger.error(f"Error initializing Gemini model: {type(e).__name__}: {str(e)}")
+        # Only log error type to avoid exposing API key in logs
+        error_type = type(e).__name__
+        logger.error(f"Error initializing Gemini model: {error_type}")
+        logger.error("Check your GEMINI_API_KEY environment variable")
         raise
 
 
@@ -290,5 +297,8 @@ Keep the language friendly and engaging, and ensure each section is {length_inst
 
         return formatted_content
     except Exception as e:
-        logger.error(f"Error generating content: {type(e).__name__}: {str(e)}")
+        # Only log error type to avoid exposing API key in logs
+        error_type = type(e).__name__
+        logger.error(f"Error generating content: {error_type}")
+        logger.error("Check Gemini API configuration and model availability")
         return None

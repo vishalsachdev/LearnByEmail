@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import urllib.parse
 import asyncio
+from smtplib import SMTPAuthenticationError, SMTPException
 
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
@@ -152,17 +153,23 @@ async def send_via_sendgrid(to_email, subject, html_content):
                 logger.info("Email sent successfully via SendGrid")
                 return True
             else:
-                logger.error(f"SendGrid API error: {status_code}")
-                logger.error(f"Response body: {response.body}")
+                logger.error(f"SendGrid API error: Status code {status_code}")
+                # Avoid logging potentially sensitive response bodies
+                logger.error("Check SendGrid dashboard for detailed error information")
                 return False
         except Exception as send_error:
-            logger.error(f"SendGrid send error: {type(send_error).__name__}: {str(send_error)}")
-            if hasattr(send_error, 'body'):
-                logger.error(f"SendGrid error body: {send_error.body}")
+            # Log only error type, not the full exception which might contain API keys
+            error_type = type(send_error).__name__
+            logger.error(f"SendGrid send error: {error_type}")
+            if hasattr(send_error, 'body') and send_error.body:
+                logger.error("SendGrid returned an error response. Check dashboard for details.")
             return False
 
     except Exception as e:
-        logger.error(f"SendGrid Error: {type(e).__name__}: {str(e)}")
+        # Log only the error type to avoid exposing API keys in logs
+        error_type = type(e).__name__
+        logger.error(f"SendGrid initialization error: {error_type}")
+        logger.error("Check your SendGrid configuration and API key validity")
         return False
 
 
@@ -181,13 +188,23 @@ async def send_via_smtp(to_email, subject, html_content):
         logger.info(f"Attempting to send email via SMTP to {to_email}")
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
+            # Log before sensitive operation with masked credentials
+            logger.info(f"Authenticating with Gmail SMTP using account: {username}")
+            # Actual login with real password
             server.login(username, password)
             server.send_message(msg)
             
         logger.info(f"Successfully sent email via SMTP to {to_email}")
         return True
+    except smtplib.SMTPAuthenticationError:
+        logger.error("SMTP Authentication Error: Failed to authenticate with Gmail")
+        logger.error("Check your GMAIL_USERNAME and GMAIL_APP_PASSWORD environment variables")
+        return False
     except Exception as e:
-        logger.error(f"SMTP Error: {type(e).__name__}: {str(e)}")
+        # Log only error type to avoid potentially exposing credentials
+        error_type = type(e).__name__
+        logger.error(f"SMTP Error: {error_type}")
+        logger.error("Check your SMTP configuration and credentials")
         return False
 
 
