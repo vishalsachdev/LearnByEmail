@@ -46,6 +46,11 @@ logs/
 # Documentation and planning files
 docs/features/
 DB_BEST_PRACTICES.md
+*_INTERNAL.md
+DOCUMENTATION_INTERNAL.md
+SECURITY.md
+DEPLOYMENT.md
+.env.example
 
 # Node.js
 node_modules/

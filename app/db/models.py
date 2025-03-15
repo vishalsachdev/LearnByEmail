@@ -15,6 +15,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     reset_token = Column(String(256), nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
+    is_admin = Column(Integer, default=0, nullable=False)  # 0=false, 1=true
     
     subscriptions = relationship("Subscription", back_populates="user")
     

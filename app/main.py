@@ -17,7 +17,7 @@ from app.db.session import get_db, engine
 from app.db.models import Base, User, Subscription
 from app.api import auth, subscriptions, content_preview
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
-from app.core.security import get_current_user_optional, authenticate_user, create_access_token
+from app.core.security import get_current_user_optional, authenticate_user, create_access_token, get_current_user
 
 # Setup logging
 import os
@@ -56,7 +56,9 @@ if settings.BACKEND_CORS_ORIGINS:
 app.add_middleware(
     SessionMiddleware, 
     secret_key=settings.SECRET_KEY,
-    max_age=3600  # 1 hour
+    max_age=3600,  # 1 hour
+    same_site=settings.COOKIE_SAMESITE,  # Use same SameSite policy as auth cookies
+    https_only=settings.COOKIE_SECURE,   # Secure flag for HTTPS
 )
 
 # Setup Jinja2 templates
@@ -472,6 +474,8 @@ async def login_submit(
         key="access_token",
         value=access_token,  # Just the raw token, not "Bearer {token}"
         httponly=True,
+        secure=settings.COOKIE_SECURE,  # True in production/https environments
+        samesite=settings.COOKIE_SAMESITE,  # 'lax' or 'strict'
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -544,7 +548,12 @@ async def register_submit(
 async def logout():
     """Log out user by deleting token cookie"""
     response = RedirectResponse(url="/", status_code=303)
-    response.delete_cookie(key="access_token")
+    response.delete_cookie(
+        key="access_token",
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        httponly=True
+    )
     return response
 
 
@@ -993,19 +1002,33 @@ async def test_email(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-# Check environment variables
+# Check environment variables - Admin only
 @app.get("/check-env")
-async def check_env():
-    """Check environment variables"""
+async def check_env(current_user: User = Depends(get_current_user)):
+    """Check environment variables (admin only)"""
+    # Only allow admin access (first check if is_admin exists, if not, restrict to no one)
     try:
+        if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
+            logger.warning(f"Unauthorized attempt to access /check-env by user {current_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+            
         from app.core.config import settings
-        import os
         
+        # Don't show full API keys, only status and partial key
+        def mask_api_key(key: str) -> str:
+            if not key:
+                return "Not Set"
+            return f"Set (ends with ...{key[-4:]})"
+            
         env_vars = {
-            "SENDGRID_API_KEY": f"{'Set' if settings.SENDGRID_API_KEY else 'Not Set'}",
+            "SENDGRID_API_KEY": mask_api_key(settings.SENDGRID_API_KEY),
             "SENDGRID_FROM_EMAIL": settings.SENDGRID_FROM_EMAIL,
-            "GEMINI_API_KEY": f"{'Set' if settings.GEMINI_API_KEY else 'Not Set'}",
-            "DATABASE_URL": settings.DATABASE_URL
+            "GEMINI_API_KEY": mask_api_key(settings.GEMINI_API_KEY),
+            "DATABASE_URL": settings.DATABASE_URL.split("://")[0] + "://******" 
+            if "://" in settings.DATABASE_URL else "********"
         }
         
         html = "<h1>Environment Variables</h1><ul>"
@@ -1013,45 +1036,69 @@ async def check_env():
             html += f"<li><strong>{key}:</strong> {value}</li>"
         html += "</ul>"
         
+        logger.info(f"Admin user {current_user.email} accessed environment variables")
         return HTMLResponse(html)
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        return HTMLResponse(f"<h1>Error checking environment</h1><p>{str(e)}</p>")
+        logger.error(f"Error checking environment: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error checking environment configuration"
+        )
 
 
-# Direct email test route
-@app.get("/direct-test-email/{email}")
+# Direct email test route (admin only, own email only)
+@app.get("/admin/test-email")
 async def direct_test_email(
-    email: str,
-    request: Request
+    current_user: User = Depends(get_current_user)
 ):
-    """Test route to directly attempt a test email"""
+    """Test route to attempt a test email to the current admin user"""
     try:
+        # Admin access check
+        if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
+            logger.warning(f"Unauthorized attempt to access email test by user {current_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+            
         from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail, Content
+        from sendgrid.helpers.mail import Mail
         from app.core.config import settings
         
-        # Send direct test email
-        logger.info(f"Sending direct test email to: {email}")
+        # Only allow sending to the logged-in admin's email
+        email = current_user.email
         
-        # Try to create and send a simple message
-        # Use just the email address to avoid spam filters
+        # Send direct test email
+        logger.info(f"Admin sending test email to self: {email}")
+        
+        # Create and send a simple message
         message = Mail(
             from_email=settings.SENDGRID_FROM_EMAIL,
             to_emails=email,
-            subject="LearnByEmail Test Email",
-            html_content="<p>This is a test email from LearnByEmail to verify email sending.</p>"
+            subject="LearnByEmail Admin Test Email",
+            html_content="<p>This is a test email from LearnByEmail to verify email sending functionality.</p>"
         )
         
         sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
         response = sg.send(message)
         
         status_code = response.status_code
-        logger.info(f"SendGrid direct test response: Status {status_code}")
+        logger.info(f"SendGrid admin test response: Status {status_code}")
         
         return HTMLResponse(f"<h1>Test email sent to {email}</h1><p>Status code: {status_code}</p>")
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        logger.error(f"Direct test email error: {type(e).__name__}: {str(e)}")
-        return HTMLResponse(f"<h1>Error sending test email</h1><p>Error: {str(e)}</p>")
+        logger.error(f"Admin test email error: {type(e).__name__}: {str(e)}")
+        # Don't expose detailed error messages
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error sending test email. Check server logs for details."
+        )
 
 
 # Startup and shutdown events

@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
+    # Cookie security settings
+    COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "lax")  # 'lax', 'strict', or 'none'
+    
+    @property
+    def COOKIE_SECURE(self) -> bool:
+        """
+        Determine if cookies should be secure based on BASE_URL.
+        
+        If BASE_URL starts with https://, set secure=True for production/https environments.
+        This prevents cookies from being sent over non-HTTPS connections.
+        """
+        return self.BASE_URL.startswith("https://")
+    
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./learnbyemail.db")
     

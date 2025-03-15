@@ -1,344 +1,68 @@
-# LearnByEmail FastAPI - Comprehensive Documentation
+# LearnByEmail - Public Documentation
 
 ## Overview
 
-LearnByEmail is an educational content delivery platform that sends personalized, AI-generated educational emails on topics of the user's choice. This implementation uses FastAPI for improved performance, Gemini AI for content generation, and SendGrid/SMTP for email delivery. The modern, responsive UI provides an intuitive user experience across all devices.
-
-## Architecture
-
-The application follows a modular architecture with clean separation of concerns:
-
-```
-app/
-├── api/                  # API endpoints
-│   ├── auth.py           # Authentication routes
-│   └── subscriptions.py  # Subscription management
-├── core/                 # Core configuration
-│   ├── config.py         # Settings and environment variables
-│   └── security.py       # JWT authentication, password hashing
-├── db/                   # Database access
-│   ├── models.py         # SQLAlchemy ORM models
-│   └── session.py        # Database session management
-├── schemas/              # Data validation
-│   ├── subscription.py   # Subscription data schemas
-│   └── user.py           # User data schemas
-├── services/             # Business logic
-│   ├── content_generator.py  # AI content generation
-│   ├── email_sender.py       # Email delivery
-│   └── scheduler.py          # Scheduled tasks
-├── templates/            # HTML templates
-└── static/               # Static assets
-```
+LearnByEmail is an educational content delivery platform that sends personalized, AI-generated educational emails on topics of your choice. Built with FastAPI and enhanced with modern AI content generation, it delivers tailored learning directly to your inbox at your preferred time.
 
 ## Key Features
 
-### User Authentication
+### Content Delivery
+- **Personalized Learning**: Get content on any topic you want to learn
+- **Scheduled Delivery**: Choose when you receive your educational emails
+- **Difficulty Levels**: Select from beginner, intermediate, or advanced content
+- **Content Continuity**: Lessons build upon previous content for progressive learning
 
-- JWT-based authentication
-- Password hashing with bcrypt
-- Cookie-based token storage
-- Optional user authentication for public routes
+### User Experience
+- **Simple Subscription**: One-click subscription form on the homepage
+- **Interactive Dashboard**: Manage all your learning topics in one place
+- **Content Preview**: See example content before subscribing
+- **Timezone Support**: Automatic detection of your local timezone
 
-### Content Generation
+### Technical Highlights
+- **AI-Powered**: Uses sophisticated AI models to generate educational content
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Secure Authentication**: Protects your account and preferences
 
-- Uses Google's Gemini AI models
-- Automatic model selection and fallback
-- Content is structured for educational purposes
-- Previous content is considered for continuity
+## Getting Started
 
-### Email Delivery
+### Creating an Account
+1. Visit the homepage and click "Register"
+2. Enter your email and create a password
+3. Verify your email (if verification is enabled)
 
-- Primary: SendGrid API integration
-- Fallback: SMTP via Gmail
-- HTML-formatted educational emails
-- Email history tracking
-- Test email functionality
-- Background task processing for non-blocking operation
+### Setting Up Subscriptions
+1. From your dashboard, click "Add New Subscription"
+2. Enter a topic you want to learn about
+3. Choose your preferred difficulty level
+4. Select your preferred delivery time
+5. Save your subscription
 
-### Scheduling
+### Managing Your Learning
+- Use the dashboard to view, edit or delete your subscriptions
+- Click "Preview Content" to see a sample of what you'll receive
+- Use bulk operations to update multiple subscriptions at once
 
-- APScheduler for scheduled email delivery
-- Timezone-aware scheduling
-- Subscription-based delivery times
+## FAQ
 
-### User Interface
+**Q: How much does it cost?**  
+A: LearnByEmail is currently free to use.
 
-- Modern, responsive design across all devices
-- Consistent color scheme and visual language
-- Intuitive navigation and user flows
-- Interactive form elements with validation
-- Direct subscription form on the landing page
-- Dashboard with subscription management
-- Clean, card-based layout for better organization
-- Visual feedback for user actions
-- Content preview feature with difficulty selection
-- Difficulty levels (Beginner, Intermediate, Advanced) for personalized learning
-- Mobile-optimized layouts with touch-friendly controls
-- Automatic timezone detection from browser settings
-- Accessibility considerations for all users
+**Q: How frequent are the emails?**  
+A: You'll receive one email per day for each subscription at your chosen time.
 
-## Environment Configuration
+**Q: Can I change the delivery frequency?**  
+A: Currently, emails are sent daily. More delivery options may be added in the future.
 
-The application has a flexible environment configuration system that automatically detects whether it's running on Replit or in a local environment and loads variables accordingly.
+**Q: What topics can I learn about?**  
+A: You can choose virtually any topic of interest - from programming to history, science, languages, and more.
 
-### Local Development
+**Q: How do I stop receiving emails?**  
+A: You can delete a subscription from your dashboard at any time.
 
-Create a `.env` file in the root directory with the following variables:
+## Contact
 
-```
-# Required settings - SECURITY CRITICAL
-# Generate a secure key with: python -m app.core.security
-API_SECRET_KEY=your-secure-generated-key-minimum-32-characters-long
+For support or feedback, please email us at support@learnbyemail.com.
 
-# Your application's public URL (important for password reset emails)
-BASE_URL=http://localhost:8000
+---
 
-# Content generation (required)
-GEMINI_API_KEY=your-gemini-api-key
-
-# Email sending (choose one method)
-# Option 1: SendGrid (recommended)
-SENDGRID_API_KEY=your-sendgrid-api-key
-SENDGRID_FROM_EMAIL=your-verified-sender@example.com
-SENDGRID_FROM_NAME=LearnByEmail
-
-# Option 2: Gmail SMTP
-GMAIL_USERNAME=your-gmail-username@gmail.com
-GMAIL_APP_PASSWORD=your-app-specific-password
-```
-
-### Replit Deployment
-
-For Replit deployment, add these same variables as Secrets in the Replit environment:
-
-1. Go to the "Secrets" tab in your Replit project
-2. Add each of the required environment variables as individual secrets
-3. The application will automatically detect it's running on Replit and use these secrets instead of the .env file
-
-> **Note**: For email delivery to work, you must configure either SendGrid (recommended) or Gmail SMTP. Without these settings, the application will generate content but won't be able to deliver emails.
-
-> **Important**: If you're using a custom domain, make sure to set `BASE_URL` to your custom domain (e.g., https://learnbyemail.com) for proper functioning of password reset emails and other features that generate URLs.
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/v1/auth/login`: Authenticate and get JWT token
-- `POST /api/v1/auth/register`: Register a new user
-- `GET /api/v1/auth/me`: Get current user information
-
-### Subscriptions
-
-- `GET /api/v1/subscriptions/`: List user's subscriptions
-- `POST /api/v1/subscriptions/`: Create a new subscription
-- `GET /api/v1/subscriptions/{id}`: Get a specific subscription
-- `PUT /api/v1/subscriptions/{id}`: Update a subscription
-- `DELETE /api/v1/subscriptions/{id}`: Delete a subscription
-- `GET /api/v1/subscriptions/{id}/history`: Get email history
-
-### Content Preview
-
-- `POST /api/v1/preview/generate`: Generate a content preview for a topic
-  - Parameters: `topic` (required), `difficulty` (optional: easy, medium, hard)
-
-### Web UI Routes
-
-- `GET /`: Home page
-- `GET /login`: Login page
-- `POST /login`: Process login
-- `GET /register`: Registration page
-- `POST /register`: Process registration
-- `GET /dashboard`: User dashboard
-- `POST /subscribe`: Create subscription from form
-- `GET /about`: About Us page
-- `GET /privacy`: Privacy Policy page
-- `GET /terms`: Terms of Service page
-- `GET /contact`: Contact page
-- `GET /test-email/{id}`: Test send an email immediately
-- `GET /check-env`: Display current environment configuration (debugging)
-- `GET /direct-test-email/{email}`: Send a direct test email (debugging)
-
-## Database Schema
-
-### Users
-
-- `id`: Integer primary key
-- `email`: String, unique
-- `password_hash`: String
-- `created_at`: DateTime
-
-### Subscriptions
-
-- `id`: Integer primary key
-- `email`: String
-- `topic`: String
-- `preferred_time`: Time
-- `timezone`: String
-- `difficulty`: String (easy, medium, hard)
-- `created_at`: DateTime
-- `last_sent`: DateTime (nullable)
-- `user_id`: Integer foreign key
-
-### EmailHistory
-
-- `id`: Integer primary key
-- `subscription_id`: Integer foreign key
-- `content`: Text
-- `sent_at`: DateTime
-
-## Advanced Usage
-
-### Testing Email Delivery
-
-Use the test endpoint to send an email immediately:
-
-```
-GET /test-email/{subscription_id}
-```
-
-Or click the "Test Send Email Now" button on the dashboard.
-
-### Logging
-
-All logs are written to `app.log` in the root directory. View them with:
-
-```bash
-tail -f app.log
-```
-
-The logging level is set to DEBUG to provide detailed information for troubleshooting.
-
-### Content Generation
-
-The application will automatically try several Gemini models in this order:
-1. gemini-2.0-flash
-2. gemini-1.5-flash
-3. gemini-1.5-pro
-4. gemini-pro
-
-The content generator will use the first available model that works with your API key.
-
-## Deployment Considerations
-
-### Security
-
-- Change the SECRET_KEY for production
-- Use HTTPS in production
-- Consider adding rate limiting
-- Implement CSRF protection for production
-
-### Database
-
-- For production, use PostgreSQL or MySQL
-- Set up database migrations with Alembic
-- Consider connection pooling for high traffic
-
-### Email Delivery
-
-- For production, use SendGrid or other enterprise email service
-- Verify your sender domain with SendGrid
-- Implement email bounce handling
-- Monitor delivery rates
-
-### Scaling
-
-- Deploy behind a reverse proxy (Nginx, Traefik)
-- Consider containerization with Docker
-- For high volumes, separate the scheduler into a dedicated worker
-- Use a production ASGI server like Uvicorn behind Gunicorn
-
-### Frontend Assets
-
-- Static assets are served directly from FastAPI
-- CSS is primarily embedded for faster page loads in this version
-- Consider using a CDN for static assets in high-traffic production environments
-- Maintain the color scheme defined in CSS variables for consistency
-
-## UI/UX Design
-
-### Design Principles
-
-- **Consistency**: Consistent color scheme, typography, and spacing across all pages
-- **Responsiveness**: Mobile-first design that adapts to all screen sizes
-- **Accessibility**: High-contrast text, clear navigation, and proper form labels
-- **User Feedback**: Visual feedback for user actions and form validation
-- **Simplicity**: Clean, uncluttered layouts that focus on the content
-
-### Color Scheme
-
-- Primary color: #34a853 (green)
-- Secondary color: #4285f4 (blue)
-- Accent color: #ea4335 (red)
-- Background color: #f8f9fa (light gray)
-- Text colors: #333 (dark gray), #666 (medium gray)
-
-### Key Templates
-
-- `base.html`: Template base with common styles, navigation and footer for all pages
-- `index.html`: Landing page with feature showcase and subscription form
-- `login.html`: User login page
-- `register.html`: User registration with benefits list
-- `dashboard.html`: User dashboard with subscription management
-- `about.html`: About Us page with mission statement and features
-- `privacy.html`: Privacy Policy page with data handling information
-- `terms.html`: Terms of Service page with user agreement details
-- `contact.html`: Contact page with support information and FAQ section
-
-### Content Preview Feature
-
-The dashboard includes a content preview feature that allows users to see example educational content before subscribing:
-
-- **Location**: Found in the "Add New Subscription" form on the dashboard
-- **Functionality**: 
-  - Clicking "See Example Content" generates a preview of educational content
-  - Users can select difficulty level (Beginner, Intermediate, Advanced)
-  - Preview generates using the Gemini API via `/api/v1/preview/generate` endpoint
-  - A refresh button allows regenerating content with the same topic and difficulty
-
-- **Implementation Notes**:
-  - Uses JavaScript in `static/js/content_preview.js` to handle AJAX requests
-  - Preview container is dynamically shown/hidden based on user interaction
-  - Content is displayed in a styled container with close button
-  - The feature uses authentication token from cookies when available
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Email Delivery Failing**
-   - Check SendGrid API key validity
-   - Verify sender email is authorized in SendGrid
-   - Look for rate limiting or account restrictions
-
-2. **Content Generation Errors**
-   - Verify Gemini API key is valid
-   - Check for quota limits on your API key
-   - Review logs for specific error messages
-   - Ensure internet connectivity for API calls
-
-3. **Authentication Issues**
-   - Check that API_SECRET_KEY is set and at least 32 characters long
-   - Clear browser cookies if experiencing login loops or "already registered" errors
-   - Check for database connectivity issues
-   - In Replit: If you delete the database and are still seeing "email already registered" errors, 
-     try clearing your browser cookies for the Replit domain or use incognito/private mode
-   - JWT tokens are stored in cookies and may persist even after database resets
-
-4. **Scheduling Problems**
-   - Verify timezone settings
-   - Check that APScheduler is running
-   - Ensure database has correct time values
-   - Check logs for scheduler exceptions
-
-5. **UI Display Issues**
-   - Clear browser cache if styles aren't updating
-   - Check browser console for JavaScript errors
-   - Verify that all required static assets are being served correctly
-   - Test on different browsers and devices for compatibility issues
-
-6. **Content Preview Issues**
-   - Ensure the API endpoint in content_preview.js matches the FastAPI route (`/api/v1/preview/generate`)
-   - Check browser console for AJAX errors or response issues
-   - Verify that the preview container is properly created and visible in the DOM
-   - Check the Gemini API key and quota if content generation fails
-   - If buttons don't respond, check event listener registration in the console logs
+*LearnByEmail respects your privacy. We only use your email for delivering the content you requested. See our Privacy Policy for more details.*
