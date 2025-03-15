@@ -1,1 +1,1 @@
-# LearningPulse FastAPI application package
+# LearnByEmail FastAPI application package

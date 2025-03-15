@@ -284,6 +284,23 @@ The content generator will use the first available model that works with your AP
 - `terms.html`: Terms of Service page with user agreement details
 - `contact.html`: Contact page with support information and FAQ section
 
+### Content Preview Feature
+
+The dashboard includes a content preview feature that allows users to see example educational content before subscribing:
+
+- **Location**: Found in the "Add New Subscription" form on the dashboard
+- **Functionality**: 
+  - Clicking "See Example Content" generates a preview of educational content
+  - Users can select difficulty level (Beginner, Intermediate, Advanced)
+  - Preview generates using the Gemini API via `/api/v1/preview/generate` endpoint
+  - A refresh button allows regenerating content with the same topic and difficulty
+
+- **Implementation Notes**:
+  - Uses JavaScript in `static/js/content_preview.js` to handle AJAX requests
+  - Preview container is dynamically shown/hidden based on user interaction
+  - Content is displayed in a styled container with close button
+  - The feature uses authentication token from cookies when available
+
 ## Troubleshooting
 
 ### Common Issues
@@ -318,3 +335,10 @@ The content generator will use the first available model that works with your AP
    - Check browser console for JavaScript errors
    - Verify that all required static assets are being served correctly
    - Test on different browsers and devices for compatibility issues
+
+6. **Content Preview Issues**
+   - Ensure the API endpoint in content_preview.js matches the FastAPI route (`/api/v1/preview/generate`)
+   - Check browser console for AJAX errors or response issues
+   - Verify that the preview container is properly created and visible in the DOM
+   - Check the Gemini API key and quota if content generation fails
+   - If buttons don't respond, check event listener registration in the console logs

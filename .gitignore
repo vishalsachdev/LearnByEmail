@@ -45,6 +45,7 @@ logs/
 
 # Documentation and planning files
 docs/features/
+DB_BEST_PRACTICES.md
 
 # Node.js
 node_modules/

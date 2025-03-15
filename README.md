@@ -1,6 +1,17 @@
-# LearnByEmail - FastAPI Edition
+# LearnByEmail
 
-LearnByEmail is an educational email subscription service that delivers personalized, AI-generated educational content on topics of your choice. This version is built with FastAPI for improved performance and scalability.
+![LearnByEmail Banner](https://github.com/vishalsachdev/LearnByEmail/assets/banner.png)
+
+LearnByEmail is an educational email subscription service that delivers personalized, AI-generated educational content on topics of your choice. The service is designed to help students learn new subjects through daily bite-sized lessons delivered directly to your inbox at your preferred time.
+
+## 📚 How It Works
+
+1. **Choose a topic** you want to learn about (Python, History, Physics, Art, etc.)
+2. **Select your difficulty level** (Beginner, Intermediate, Advanced)
+3. **Set your preferred delivery time** and timezone
+4. **Receive daily educational emails** with bite-sized lessons on your chosen topic
+
+![Dashboard Screenshot](https://github.com/vishalsachdev/LearnByEmail/assets/dashboard.png)
 
 ## Features
 
@@ -139,10 +150,23 @@ To run tests:
 pytest
 ```
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome feedback, suggestions, and bug reports from students and educators! This project is designed to help you learn, and your input helps make it better.
 
-## License
+- **Found a bug?** Open an issue describing what happened and what you expected
+- **Have a feature idea?** Share your thoughts through the issues section
+- **Need help?** Ask questions in the discussions area
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+See our [CONTRIBUTING.md](CONTRIBUTING.md) for more details on how to get involved.
+
+## 📣 Community
+
+Join our growing community of learners:
+
+- [GitHub Discussions](https://github.com/vishalsachdev/LearnByEmail/discussions) - Ask questions and share ideas
+- For private inquiries, visit our [Contact Page](https://learnbyemail.com/contact)
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

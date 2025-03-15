@@ -1,5 +1,5 @@
 /**
- * Timezone Detection Script for LearningPulse
+ * Timezone Detection Script for LearnByEmail
  * 
  * This script detects the user's timezone and pre-selects it in the subscription form,
  * improving the user experience by eliminating the need to manually select a timezone.
@@ -77,19 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set the select value
         timezoneSelect.value = closestMatch;
         
-        // Add visual indicator that this was auto-detected
-        const timezoneLabel = document.querySelector('label[for="timezone"]');
-        if (timezoneLabel) {
-            const detectedBadge = document.createElement('span');
-            detectedBadge.className = 'badge bg-info ms-2 timezone-detected-badge';
-            detectedBadge.textContent = 'Auto-detected';
-            detectedBadge.style.fontSize = '0.7rem';
-            
-            // Only add the badge if it doesn't already exist
-            if (!timezoneLabel.querySelector('.timezone-detected-badge')) {
-                timezoneLabel.appendChild(detectedBadge);
-            }
-        }
+        // We no longer add the "Auto-detected" badge to keep the UI clean
+        // The timezone selection still happens automatically
         
         // Set the preferred time input to a reasonable default time (if it's a new subscription)
         const preferredTimeInput = document.getElementById('preferred_time');
@@ -108,15 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const suggestedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
             preferredTimeInput.value = suggestedTime;
             
-            // Add a small indicator for this auto-filled time
-            const timeLabel = document.querySelector('label[for="preferred_time"]');
-            if (timeLabel && !timeLabel.querySelector('.time-suggested-badge')) {
-                const suggestedBadge = document.createElement('span');
-                suggestedBadge.className = 'badge bg-secondary ms-2 time-suggested-badge';
-                suggestedBadge.textContent = 'Suggested';
-                suggestedBadge.style.fontSize = '0.7rem';
-                timeLabel.appendChild(suggestedBadge);
-            }
+            // We no longer add the "Suggested" badge to keep the UI clean
+            // The time suggestion still happens automatically
         }
     }
 
