@@ -14,7 +14,7 @@
             <div class="card-body">
                 <h2 class="card-title text-center mb-4">Edit Subscription</h2>
                 
-                <form action="{{ url_for('edit_subscription_submit', subscription_id=subscription.id) }}" method="post">
+                <form action="/edit-subscription/{{ subscription.id }}" method="post">
                     <div class="mb-4">
                         <label for="email" class="form-label">Email address</label>
                         <input type="email" class="form-control" id="email" value="{{ subscription.email }}" readonly>
