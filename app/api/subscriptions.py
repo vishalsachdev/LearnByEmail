@@ -14,6 +14,7 @@ from app.schemas.subscription import (
     EmailHistoryResponse
 )
 from app.services.scheduler import add_email_job, remove_email_job
+from app.api.base_dependencies import verify_csrf_token
 
 router = APIRouter()
 
@@ -38,7 +39,7 @@ async def get_subscriptions(
     return subscriptions
 
 
-@router.post("/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(verify_csrf_token)])
 async def create_subscription(
     subscription_in: SubscriptionCreate,
     background_tasks: BackgroundTasks,

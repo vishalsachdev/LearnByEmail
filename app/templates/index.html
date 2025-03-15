@@ -57,6 +57,7 @@
                 <p class="card-text">Fill out the form below to start receiving daily educational content:</p>
                 
                 <form action="{{ url_for('subscribe') }}" method="post">
+                    {% include "_csrf_token.html" %}
                     <div class="mb-3">
                         <label for="email" class="form-label">Email address</label>
                         <input type="email" class="form-control" id="email" name="email" required 

@@ -17,11 +17,12 @@ from app.db.session import get_db
 from app.db.models import User
 from app.schemas.user import Token, UserCreate, UserResponse, UserPasswordReset, UserResetToken, UserResetPassword
 from app.services.email_sender import send_password_reset_email
+from app.api.base_dependencies import verify_csrf_token
 
 router = APIRouter()
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[Depends(verify_csrf_token)])
 async def login_access_token(
     db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
@@ -44,7 +45,7 @@ async def login_access_token(
     }
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(verify_csrf_token)])
 async def register_user(
     user_in: UserCreate, db: Session = Depends(get_db)
 ) -> Any:
@@ -87,7 +88,7 @@ async def read_users_me(
     return current_user
 
 
-@router.post("/forgot-password", response_model=UserResetToken)
+@router.post("/forgot-password", response_model=UserResetToken, dependencies=[Depends(verify_csrf_token)])
 async def forgot_password(
     user_data: UserPasswordReset, 
     background_tasks: BackgroundTasks,
@@ -124,7 +125,7 @@ async def forgot_password(
     return {"token": reset_token}
 
 
-@router.post("/reset-password", response_model=UserResponse)
+@router.post("/reset-password", response_model=UserResponse, dependencies=[Depends(verify_csrf_token)])
 async def reset_password(
     reset_data: UserResetPassword,
     db: Session = Depends(get_db)

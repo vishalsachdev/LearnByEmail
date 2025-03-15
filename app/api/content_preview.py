@@ -8,6 +8,7 @@ from app.core.security import get_current_user_optional
 from app.db.session import get_db
 from app.db.models import User
 from app.services.content_generator import generate_educational_content
+from app.api.base_dependencies import verify_csrf_token
 
 router = APIRouter()
 
@@ -17,7 +18,7 @@ class ContentPreviewRequest(BaseModel):
     difficulty: Optional[str] = "medium"  # easy, medium, hard
 
 
-@router.post("/generate", response_class=HTMLResponse)
+@router.post("/generate", response_class=HTMLResponse, dependencies=[Depends(verify_csrf_token)])
 async def generate_content_preview(
     request: ContentPreviewRequest,
     db: Session = Depends(get_db),

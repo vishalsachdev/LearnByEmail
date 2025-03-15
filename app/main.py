@@ -18,6 +18,7 @@ from app.db.models import Base, User, Subscription
 from app.api import auth, subscriptions, content_preview
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
 from app.core.security import get_current_user_optional, authenticate_user, create_access_token, get_current_user
+from app.core.csrf import CSRFMiddleware, csrf_protect, get_csrf_token, CSRF_FORM_FIELD
 
 # Setup logging
 import os
@@ -61,6 +62,9 @@ app.add_middleware(
     https_only=settings.COOKIE_SECURE,   # Secure flag for HTTPS
 )
 
+# Add CSRF protection middleware
+app.add_middleware(CSRFMiddleware)
+
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
@@ -70,6 +74,8 @@ templates = Jinja2Templates(directory="app/templates")
 async def add_template_globals(request: Request, call_next):
     # Store request in template context
     templates.env.globals["request"] = request
+    templates.env.globals["csrf_token"] = get_csrf_token(request)
+    templates.env.globals["csrf_field"] = CSRF_FORM_FIELD
     
     # We will add flash messages in the route handlers
     # NOT in middleware to avoid initialization order issues
@@ -286,7 +292,7 @@ async def contact_page(
     )
 
 
-@app.post("/subscribe", response_class=HTMLResponse)
+@app.post("/subscribe", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
 async def subscribe(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -444,7 +450,7 @@ async def login_page(
     )
 
 
-@app.post("/login", response_class=HTMLResponse)
+@app.post("/login", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
 async def login_submit(
     request: Request,
     response: Response,
@@ -498,7 +504,7 @@ async def register_page(
     )
 
 
-@app.post("/register", response_class=HTMLResponse)
+@app.post("/register", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
 async def register_submit(
     request: Request,
     email: str = Form(...),
@@ -663,7 +669,7 @@ async def edit_subscription_page(
     )
 
 
-@app.post("/edit-subscription/{subscription_id}", response_class=HTMLResponse)
+@app.post("/edit-subscription/{subscription_id}", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
 async def edit_subscription_submit(
     request: Request,
     subscription_id: int,
@@ -756,7 +762,7 @@ async def edit_subscription_submit(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-@app.post("/delete-subscription/{subscription_id}")
+@app.post("/delete-subscription/{subscription_id}", dependencies=[Depends(csrf_protect)])
 async def delete_subscription(
     request: Request,
     subscription_id: int,
@@ -802,7 +808,7 @@ async def delete_subscription(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-@app.post("/bulk-subscription-action")
+@app.post("/bulk-subscription-action", dependencies=[Depends(csrf_protect)])
 async def bulk_subscription_action(
     request: Request,
     db: Session = Depends(get_db),

@@ -15,6 +15,7 @@
                 <h2 class="card-title text-center mb-4">Edit Subscription</h2>
                 
                 <form action="/edit-subscription/{{ subscription.id }}" method="post">
+                    {% include "_csrf_token.html" %}
                     <div class="mb-4">
                         <label for="email" class="form-label">Email address</label>
                         <input type="email" class="form-control" id="email" value="{{ subscription.email }}" readonly>
@@ -67,6 +68,7 @@
                 
                 <div class="mt-5 pt-3 border-top">
                     <form action="{{ url_for('delete_subscription', subscription_id=subscription.id) }}" method="post">
+                        {% include "_csrf_token.html" %}
                         <div class="d-grid">
                             <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to delete this subscription?')">
                                 <i class="fas fa-trash"></i> Delete Subscription
