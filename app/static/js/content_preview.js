@@ -261,13 +261,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Using token for preview request:', token ? 'Token found' : 'No token found');
             
+            // Get the CSRF token from the form
+            const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+            const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+            
+            console.log('Using CSRF token for preview request:', csrfToken ? 'Token found' : 'No CSRF token found');
+            
             // Call the API
             const response = await fetch('/api/v1/preview/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': token ? `Bearer ${token}` : '',
-                    'X-CSRF-Token': 'preview-token' // Add CSRF protection if needed
+                    'X-CSRF-Token': csrfToken
                 },
                 body: JSON.stringify({
                     topic: topic,
