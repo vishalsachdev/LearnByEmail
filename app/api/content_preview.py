@@ -18,7 +18,7 @@ class ContentPreviewRequest(BaseModel):
     difficulty: Optional[str] = "medium"  # easy, medium, hard
 
 
-@router.post("/generate", response_class=HTMLResponse, dependencies=[Depends(verify_csrf_token)])
+@router.post("/generate", response_class=HTMLResponse)
 async def generate_content_preview(
     request: ContentPreviewRequest,
     db: Session = Depends(get_db),
