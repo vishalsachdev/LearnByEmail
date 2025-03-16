@@ -40,11 +40,11 @@
                                         {% else %}{{ subscription.difficulty|capitalize }}{% endif %}
                                     </span>
                                 </td>
-                                <td>{{ subscription.preferred_time.strftime('%H:%M') }}</td>
+                                <td>{{ subscription.preferred_time.strftime('%I:%M %p') }}</td>
                                 <td>{{ subscription.timezone }}</td>
                                 <td>
                                     {% if subscription.last_sent %}
-                                    {{ subscription.local_last_sent.strftime('%H:%M') }} on {{ subscription.local_last_sent.strftime('%Y-%m-%d') }}
+                                    {{ subscription.local_last_sent.strftime('%I:%M %p') }} on {{ subscription.local_last_sent.strftime('%b %d, %Y') }}
                                     {% else %}
                                     Not sent yet
                                     {% endif %}
@@ -88,12 +88,12 @@
                                                 {% else %}{{ subscription.difficulty|capitalize }}{% endif %}
                                             </span>
                                         </p>
-                                        <p class="mb-1"><i class="fas fa-clock me-2"></i> {{ subscription.preferred_time.strftime('%H:%M') }}</p>
+                                        <p class="mb-1"><i class="fas fa-clock me-2"></i> {{ subscription.preferred_time.strftime('%I:%M %p') }}</p>
                                         <p class="mb-1"><i class="fas fa-globe me-2"></i> {{ subscription.timezone }}</p>
                                         <p class="mb-3">
                                             <i class="fas fa-paper-plane me-2"></i> 
                                             {% if subscription.last_sent %}
-                                            {{ subscription.local_last_sent.strftime('%H:%M') }} on {{ subscription.local_last_sent.strftime('%Y-%m-%d') }}
+                                            {{ subscription.local_last_sent.strftime('%I:%M %p') }} on {{ subscription.local_last_sent.strftime('%b %d, %Y') }}
                                             {% else %}
                                             Not sent yet
                                             {% endif %}
