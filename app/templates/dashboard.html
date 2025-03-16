@@ -21,7 +21,6 @@
                         <thead>
                             <tr>
                                 <th>Topic</th>
-                                <th>Email</th>
                                 <th>Difficulty</th>
                                 <th>Delivery Time</th>
                                 <th>Timezone</th>
@@ -33,7 +32,6 @@
                             {% for subscription in subscriptions %}
                             <tr>
                                 <td>{{ subscription.topic }}</td>
-                                <td>{{ subscription.email }}</td>
                                 <td>
                                     <span class="badge {% if subscription.difficulty == 'easy' %}bg-success{% elif subscription.difficulty == 'medium' %}bg-primary{% elif subscription.difficulty == 'hard' %}bg-primary{% else %}bg-secondary{% endif %}">
                                         {% if subscription.difficulty == 'easy' %}Beginner
@@ -81,7 +79,6 @@
                                             <h5 class="card-title mb-0">{{ subscription.topic }}</h5>
                                     </div>
                                     <div class="subscription-details">
-                                        <p class="mb-1"><i class="fas fa-envelope me-2"></i> {{ subscription.email }}</p>
                                         <p class="mb-1">
                                             <i class="fas fa-graduation-cap me-2"></i> 
                                             <span class="badge {% if subscription.difficulty == 'easy' %}bg-success{% elif subscription.difficulty == 'medium' %}bg-primary{% elif subscription.difficulty == 'hard' %}bg-primary{% else %}bg-secondary{% endif %}">
@@ -133,11 +130,8 @@
                 <form id="subscriptionForm" action="{{ url_for('subscribe') }}" method="post">
                     {% include "_csrf_token.html" %}
                     <div class="row">
-                        <div class="col-12 col-sm-6 col-md-3 mb-4">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" readonly>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-3 mb-4">
+                        <input type="hidden" id="email" name="email" value="{{ current_user.email }}">
+                        <div class="col-12 col-sm-6 col-md-4 mb-4">
                             <label for="topic" class="form-label">Topic</label>
                             <input type="text" class="form-control" id="topic" name="topic" placeholder="e.g., Python, History, Physics" required>
                             <button type="button" id="preview-button" class="btn btn-outline-primary mt-2 w-100" onclick="console.log('Preview button clicked directly')">
@@ -156,7 +150,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-2 mb-4">
+                        <div class="col-12 col-sm-6 col-md-3 mb-4">
                             <label for="preferred_time" class="form-label">Preferred Time</label>
                             <input type="time" class="form-control" id="preferred_time" name="preferred_time" required>
                         </div>
@@ -168,7 +162,7 @@
                                 <option value="hard">Advanced</option>
                             </select>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-2 mb-4">
+                        <div class="col-12 col-sm-6 col-md-3 mb-4">
                             <label for="timezone" class="form-label">Timezone</label>
                             <select class="form-select" id="timezone" name="timezone" required>
                                 <option value="America/New_York">Eastern Time (ET)</option>
