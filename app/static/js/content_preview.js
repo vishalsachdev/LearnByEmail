@@ -261,11 +261,32 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Using token for preview request:', token ? 'Token found' : 'No token found');
             
-            // Get the CSRF token from the form
+            // Try to get the CSRF token from various sources
+            // First try to get from a form input
+            let csrfToken = '';
             const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
-            const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+            if (csrfTokenInput) {
+                csrfToken = csrfTokenInput.value;
+                console.log('Found CSRF token in form input');
+            } 
+            
+            // If not found in form, try to get from cookie
+            if (!csrfToken) {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith('csrf_token=')) {
+                        csrfToken = cookie.substring('csrf_token='.length, cookie.length);
+                        console.log('Found CSRF token in cookie');
+                        break;
+                    }
+                }
+            }
             
             console.log('Using CSRF token for preview request:', csrfToken ? 'Token found' : 'No CSRF token found');
+            if (csrfToken) {
+                console.log('CSRF token begins with:', csrfToken.substring(0, 10) + '...');
+            }
             
             // Call the API
             const response = await fetch('/api/v1/preview/generate', {
@@ -285,7 +306,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Preview API response status:', response.status);
             
             if (!response.ok) {
-                throw new Error(`Error: ${response.status}`);
+                const errorText = await response.text();
+                console.error('Preview API error:', response.status, errorText);
+                throw new Error(`Error ${response.status}: ${errorText}`);
             }
             
             const content = await response.text();

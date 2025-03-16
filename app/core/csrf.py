@@ -59,13 +59,18 @@ def validate_csrf_token(token: str) -> bool:
     Returns:
         True if valid, False otherwise
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not token:
+        logger.warning("CSRF validation failed: Empty token")
         return False
         
     try:
         # Split token into parts
         parts = token.split(".")
         if len(parts) != 4:
+            logger.warning(f"CSRF validation failed: Wrong number of parts in token (got {len(parts)}, expected 4)")
             return False
             
         prefix, timestamp_str, random_part, signature = parts
@@ -75,8 +80,10 @@ def validate_csrf_token(token: str) -> bool:
             timestamp = int(timestamp_str)
             current_time = int(time.time())
             if current_time - timestamp > CSRF_TOKEN_EXPIRY:
+                logger.warning(f"CSRF validation failed: Token expired (created at {timestamp}, current time {current_time})")
                 return False
         except ValueError:
+            logger.warning("CSRF validation failed: Invalid timestamp format")
             return False
             
         # Reconstruct token parts for signature verification
@@ -90,8 +97,12 @@ def validate_csrf_token(token: str) -> bool:
         ).hexdigest()
         
         # Constant-time comparison to prevent timing attacks
-        return secrets.compare_digest(signature, expected_signature)
-    except Exception:
+        valid = secrets.compare_digest(signature, expected_signature)
+        if not valid:
+            logger.warning("CSRF validation failed: Invalid signature")
+        return valid
+    except Exception as e:
+        logger.warning(f"CSRF validation failed with exception: {str(e)}")
         return False
 
 
