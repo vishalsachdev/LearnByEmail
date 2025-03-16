@@ -27,6 +27,15 @@
 - API: Follow RESTful design principles
 - Templates: Extend base.html, use consistent block structure
 
+## Security Best Practices
+- CSRF: All forms should include CSRF token via {% include "_csrf_token.html" %}
+- CSRF: All POST/PUT/DELETE API endpoints should use dependencies=[Depends(verify_csrf_token)]
+- CSRF: AJAX requests must include 'X-CSRF-Token' header with token from form or cookie
+- Admin: Use dependencies=[Depends(get_current_user)] and check is_admin property
+- Tokens: All user-specific tokens should expire (password reset: 24h, session: 7d)
+- Validation: Validate all user inputs with appropriate constraints
+- Logging: Log security events but never log sensitive values (use masking)
+
 ## FastAPI Specifics
 - Use dependency injection for database sessions, authentication
 - Define Pydantic models in schemas directory
