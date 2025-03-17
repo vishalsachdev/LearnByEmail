@@ -19,6 +19,7 @@ from app.api import auth, subscriptions, content_preview
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
 from app.core.security import get_current_user_optional, authenticate_user, create_access_token, get_current_user
 from app.core.csrf import CSRFMiddleware, csrf_protect, get_csrf_token, CSRF_FORM_FIELD
+from app.core.rate_limit import configure_rate_limiting, strict_rate_limit, standard_rate_limit
 
 # Setup logging
 import os
@@ -64,6 +65,9 @@ app.add_middleware(
 
 # Add CSRF protection middleware
 app.add_middleware(CSRFMiddleware)
+
+# Configure rate limiting
+configure_rate_limiting(app)
 
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
@@ -292,7 +296,7 @@ async def contact_page(
     )
 
 
-@app.post("/subscribe", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
+@app.post("/subscribe", response_class=HTMLResponse, dependencies=[Depends(csrf_protect), Depends(standard_rate_limit())])
 async def subscribe(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -450,7 +454,7 @@ async def login_page(
     )
 
 
-@app.post("/login", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
+@app.post("/login", response_class=HTMLResponse, dependencies=[Depends(csrf_protect), Depends(strict_rate_limit())])
 async def login_submit(
     request: Request,
     response: Response,
@@ -504,7 +508,7 @@ async def register_page(
     )
 
 
-@app.post("/register", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
+@app.post("/register", response_class=HTMLResponse, dependencies=[Depends(csrf_protect), Depends(strict_rate_limit())])
 async def register_submit(
     request: Request,
     email: str = Form(...),
@@ -967,7 +971,7 @@ async def bulk_subscription_action(
 
 
 # Test route for sending emails immediately
-@app.get("/test-email/{subscription_id}")
+@app.get("/test-email/{subscription_id}", dependencies=[Depends(strict_rate_limit())])
 async def test_email(
     subscription_id: int,
     request: Request,

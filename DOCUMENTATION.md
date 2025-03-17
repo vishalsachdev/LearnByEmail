@@ -22,6 +22,7 @@ LearnByEmail is an educational content delivery platform that sends personalized
 - **AI-Powered**: Uses sophisticated AI models to generate educational content
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **Secure Authentication**: Protects your account and preferences
+- **Rate Limiting**: Prevents abuse and ensures platform stability
 
 ## Getting Started
 

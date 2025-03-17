@@ -31,6 +31,8 @@
 - CSRF: All forms should include CSRF token via {% include "_csrf_token.html" %}
 - CSRF: All POST/PUT/DELETE API endpoints should use dependencies=[Depends(verify_csrf_token)]
 - CSRF: AJAX requests must include 'X-CSRF-Token' header with token from form or cookie
+- Rate Limiting: Apply strict_rate_limit() to auth endpoints: dependencies=[Depends(strict_rate_limit())]
+- Rate Limiting: Apply standard_rate_limit() to general API endpoints: dependencies=[Depends(standard_rate_limit())]
 - Admin: Use dependencies=[Depends(get_current_user)] and check is_admin property
 - Tokens: All user-specific tokens should expire (password reset: 24h, session: 7d)
 - Validation: Validate all user inputs with appropriate constraints
