@@ -49,6 +49,13 @@ async def create_subscription(
     """
     Create a new subscription
     """
+    # Check if email is confirmed
+    if current_user.email_confirmed != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please confirm your email address before creating subscriptions",
+        )
+    
     # Check if subscription already exists
     existing = db.query(Subscription).filter(
         Subscription.email == subscription_in.email,

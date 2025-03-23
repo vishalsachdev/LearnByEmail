@@ -126,11 +126,16 @@ async def get_current_user_optional(
 def authenticate_user(db: Session, email: str, password: str) -> Optional[Any]:
     """Authenticate user by email and password"""
     from app.db.models import User
+    from fastapi import HTTPException, status
     
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
     if not verify_password(password, str(user.password_hash)):
+        return None
+    if not user.email_confirmed:
+        # Return None with a specific reason that can be checked in the login handler
+        # We don't raise an exception here to keep the function's return type consistent
         return None
     return user
 

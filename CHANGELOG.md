@@ -4,6 +4,20 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ## Implemented Features
 
+### 2025-03-23
+
+1. **Email Confirmation Feature**
+   - Added email confirmation requirement for new user registrations
+   - Implemented confirmation token generation and validation
+   - Created email confirmation endpoints and templates
+   - Added resend confirmation functionality for users
+   - Updated subscription creation to require confirmed emails
+   - Implemented secure migration path for existing users
+   - Enhanced email sending service to support confirmation emails
+   - Added comprehensive error handling and security measures
+
+
+
 ### 2025-03-14 (Evening Update)
 
 1. **Security Enhancements - Stage 1**

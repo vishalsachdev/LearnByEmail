@@ -29,7 +29,14 @@ LearnByEmail is an educational content delivery platform that sends personalized
 ### Creating an Account
 1. Visit the homepage and click "Register"
 2. Enter your email and create a password
-3. Verify your email (if verification is enabled)
+3. Check your inbox for a confirmation email
+4. Click the confirmation link to verify your email address
+
+### Email Confirmation
+1. All new accounts require email confirmation before creating subscriptions
+2. Confirmation emails contain a secure, time-limited verification link
+3. If you don't receive the confirmation email, you can request a new one from the "Resend Confirmation" page
+4. Your email must be confirmed before you can create educational subscriptions
 
 ### Setting Up Subscriptions
 1. From your dashboard, click "Add New Subscription"
@@ -59,6 +66,18 @@ A: You can choose virtually any topic of interest - from programming to history,
 
 **Q: How do I stop receiving emails?**  
 A: You can delete a subscription from your dashboard at any time.
+
+**Q: Why do I need to confirm my email?**  
+A: Email confirmation ensures that we're sending educational content to valid email addresses and helps prevent spam.
+
+**Q: I didn't receive my confirmation email. What should I do?**  
+A: Check your spam folder first. If you still can't find it, use the "Resend Confirmation" page to request a new confirmation email.
+
+**Q: How long is my confirmation link valid?**  
+A: Confirmation links expire after 24 hours for security reasons. If your link expires, you can request a new one.
+
+**Q: I confirmed my email but still can't create subscriptions. What's wrong?**  
+A: Try logging out and logging back in. If the issue persists, please contact support.
 
 ## Contact
 

@@ -16,6 +16,9 @@ class User(Base):
     reset_token = Column(String(256), nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     is_admin = Column(Integer, default=0, nullable=False)  # 0=false, 1=true
+    email_confirmed = Column(Integer, default=0, nullable=False)  # 0=false, 1=true
+    confirmation_token = Column(String(256), nullable=True)
+    confirmation_token_expires = Column(DateTime, nullable=True)
     
     subscriptions = relationship("Subscription", back_populates="user")
     

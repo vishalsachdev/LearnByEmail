@@ -9,7 +9,7 @@ from smtplib import SMTPAuthenticationError, SMTPException
 
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.db.models import Subscription, EmailHistory
+from app.db.models import Subscription, EmailHistory, User
 from app.core.config import settings
 from app.services.content_generator import generate_educational_content
 
@@ -63,7 +63,7 @@ async def create_html_email(subject, content, to_email, email_type="educational"
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 h1 {{ font-size: 24px; margin-bottom: 20px; }}
                 p {{ margin: 15px 0; }}
-                .button {{ display: inline-block; padding: 10px 20px; background-color: #4285f4; color: white; 
+                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: white; 
                           text-decoration: none; border-radius: 4px; font-weight: bold; }}
                 .footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }}
             </style>
@@ -77,6 +77,34 @@ async def create_html_email(subject, content, to_email, email_type="educational"
             <p>{content}</p>
             <p>This link will expire in 24 hours.</p>
             <p>If you didn't request this password reset, you can safely ignore this email.</p>
+            <div class="footer">
+                <p>&copy; 2025 LearnByEmail. All rights reserved.</p>
+            </div>
+        </body>
+        </html>
+        """
+    elif email_type == "confirmation":
+        body = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                h1 {{ font-size: 24px; margin-bottom: 20px; }}
+                p {{ margin: 15px 0; }}
+                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: white; 
+                          text-decoration: none; border-radius: 4px; font-weight: bold; }}
+                .footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <h1>Confirm Your Email Address</h1>
+            <p>Thank you for registering with LearnByEmail! To start receiving educational content, please confirm your email address.</p>
+            <p>Click the button below to confirm your email:</p>
+            <p><a href="{content}" class="button">Confirm Email</a></p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p>{content}</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you didn't sign up for LearnByEmail, you can safely ignore this email.</p>
             <div class="footer">
                 <p>&copy; 2025 LearnByEmail. All rights reserved.</p>
             </div>
@@ -271,6 +299,69 @@ async def send_password_reset_email(email: str, token: str):
         return False
 
 
+async def send_confirmation_email(email: str, token: str):
+    """Send email confirmation link to user"""
+    try:
+        # Create confirmation link
+        confirmation_url = f"{settings.BASE_URL}/confirm-email?token={token}"
+        
+        logger.info(f"Sending email confirmation to {email}")
+        
+        # Check which email provider is available
+        email_provider_available = False
+        
+        # Try SendGrid first
+        sent = False
+        if SENDGRID_AVAILABLE and settings.SENDGRID_API_KEY:
+            email_provider_available = True
+            logger.info(f"Attempting to send confirmation email via SendGrid to {email}")
+            
+            # Create HTML content for the confirmation email
+            msg = await create_html_email(
+                "Confirm Your LearnByEmail Account",
+                confirmation_url,
+                email,
+                email_type="confirmation"
+            )
+            
+            # Send email using SendGrid
+            sent = await send_via_sendgrid(
+                email,
+                "Confirm Your LearnByEmail Account",
+                msg.get_payload()[0].get_payload()
+            )
+            
+            if sent:
+                logger.info(f"Successfully sent confirmation email via SendGrid to {email}")
+            else:
+                logger.error(f"SendGrid confirmation email sending failed for {email}")
+        
+        # Fall back to SMTP if SendGrid failed or not available
+        if not sent:
+            if settings.GMAIL_USERNAME and settings.GMAIL_APP_PASSWORD:
+                email_provider_available = True
+                logger.info(f"Attempting to send confirmation email via SMTP to {email}")
+                sent = await send_via_smtp(
+                    email,
+                    "Confirm Your LearnByEmail Account",
+                    confirmation_url
+                )
+                
+                if sent:
+                    logger.info(f"Successfully sent confirmation email via SMTP to {email}")
+                else:
+                    logger.error(f"SMTP confirmation email sending failed for {email}")
+                    
+        if not email_provider_available:
+            logger.error("No email provider credentials configured. Cannot send confirmation email.")
+            
+        return sent
+    
+    except Exception as e:
+        logger.error(f"Error sending confirmation email: {type(e).__name__}: {str(e)}")
+        return False
+
+
 async def send_educational_email_task(subscription_id: int):
     """Send educational email to a subscriber"""
     db = SessionLocal()
@@ -280,6 +371,13 @@ async def send_educational_email_task(subscription_id: int):
         if not subscription:
             logger.error(f"Subscription {subscription_id} not found")
             return False
+            
+        # Check if user's email is confirmed (for users with accounts)
+        if subscription.user_id:
+            user = db.query(User).filter(User.id == subscription.user_id).first()
+            if user and user.email_confirmed != 1:
+                logger.warning(f"Email not confirmed for user {user.id} (subscription {subscription_id}). Skipping email.")
+                return False
         
         # Check if we already sent an email in the last hour
         now = datetime.utcnow()

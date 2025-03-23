@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Resend Confirmation Email{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h1 class="card-title mb-4 text-center">Resend Confirmation Email</h1>
+                    
+                    {% if message %}
+                    <div class="alert alert-{{ message_type }} mb-4">
+                        {{ message }}
+                    </div>
+                    {% endif %}
+                    
+                    <p class="card-text">Enter your email address below to receive a new confirmation link.</p>
+                    
+                    <form method="post" action="/resend-confirmation">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" required>
+                        </div>
+                        <div class="form-group mt-4 text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">Send Confirmation Link</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 text-center">
+                        <a href="/login">Back to Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

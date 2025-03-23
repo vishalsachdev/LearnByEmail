@@ -134,7 +134,9 @@ def url_for(name: str, **path_params) -> str:
         "about_page": "/about",
         "privacy_page": "/privacy",
         "terms_page": "/terms",
-        "contact_page": "/contact"
+        "contact_page": "/contact",
+        "confirm_email_page": "/confirm-email",
+        "resend_confirmation_page": "/resend-confirmation"
     }
     
     url = paths.get(name, "/")
@@ -151,8 +153,8 @@ def url_for(name: str, **path_params) -> str:
     if name == "delete_subscription" and "subscription_id" in path_params:
         url = f"/delete-subscription/{path_params['subscription_id']}"
 
-    # Add query params for reset-password
-    if name == "reset_password_page" and "token" in path_params:
+    # Add query params for reset-password and confirm-email
+    if name in ["reset_password_page", "confirm_email_page"] and "token" in path_params:
         url = f"{url}?token={path_params['token']}"
         
     return url
@@ -463,9 +465,19 @@ async def login_submit(
     db: Session = Depends(get_db)
 ):
     """Handle login form submission"""
+    # First check if the user exists and has the correct password but email is not confirmed
+    from app.db.models import User
+    from app.core.security import verify_password
+    
+    user_exists = db.query(User).filter(User.email == email).first()
+    if user_exists and verify_password(password, str(user_exists.password_hash)) and not user_exists.email_confirmed:
+        flash(request, "Your email address has not been confirmed. Please check your inbox or request a new confirmation email.", "warning")
+        return RedirectResponse(url=f"/resend-confirmation?email={email}", status_code=303)
+    
+    # Normal authentication flow
     user = authenticate_user(db, email, password)
     if not user:
-        flash(request, "Invalid email or password", "danger")
+        flash(request, "We couldn't find an account with those credentials. Please check your email and password or register for a new account.", "danger")
         return templates.TemplateResponse(
             "login.html", 
             {"request": request, "current_user": None}
@@ -541,16 +553,36 @@ async def register_submit(
             {"request": request, "current_user": None}
         )
     
-    # Create user
+    # Generate confirmation token
+    from app.core.security import generate_reset_token, get_reset_token_expiry
+    confirmation_token = generate_reset_token()
+    confirmation_token_expires = get_reset_token_expiry()
+    
+    # Create user with email confirmation fields
     new_user = User(
         email=email,
-        password_hash=User.get_password_hash(password)
+        password_hash=User.get_password_hash(password),
+        email_confirmed=0,  # Not confirmed yet
+        confirmation_token=confirmation_token,
+        confirmation_token_expires=confirmation_token_expires
     )
     
     db.add(new_user)
     db.commit()
+    db.refresh(new_user)
     
-    flash(request, "Registration successful! Please log in.", "success")
+    # Send confirmation email in background
+    from app.services.email_sender import send_confirmation_email
+    import asyncio
+    
+    # Create a background task to send the confirmation email
+    async def send_email_task():
+        await send_confirmation_email(email=str(new_user.email), token=confirmation_token)
+    
+    # Run the task in the background
+    asyncio.create_task(send_email_task())
+    
+    flash(request, "Registration successful! Please check your email to confirm your account.", "success")
     return RedirectResponse(url="/login", status_code=303)
 
 
@@ -1109,6 +1141,137 @@ async def direct_test_email(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error sending test email. Check server logs for details."
         )
+
+
+# Email confirmation routes
+@app.get("/confirm-email", response_class=HTMLResponse)
+async def confirm_email_page(
+    request: Request,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Email confirmation page"""
+    context = {
+        "request": request,
+        "current_user": current_user,
+        "success": False,
+        "error_message": ""
+    }
+    
+    if not token:
+        context["error_message"] = "Missing confirmation token"
+        return templates.TemplateResponse("confirm_email.html", context)
+    
+    try:
+        # Find user by token
+        user = db.query(User).filter(User.confirmation_token == token).first()
+        
+        if not user:
+            context["error_message"] = "Invalid confirmation token"
+            return templates.TemplateResponse("confirm_email.html", context)
+        
+        # Check if token is expired
+        if not user.confirmation_token_expires or user.confirmation_token_expires < datetime.utcnow():
+            context["error_message"] = "Confirmation token has expired. Please request a new one."
+            return templates.TemplateResponse("confirm_email.html", context)
+        
+        # Mark user as confirmed
+        user.email_confirmed = 1
+        user.confirmation_token = None
+        user.confirmation_token_expires = None
+        db.commit()
+        
+        # Set success context
+        context["success"] = True
+        
+        # Add flash message for dashboard
+        flash(request, "Your email has been confirmed successfully!", "success")
+        
+        return templates.TemplateResponse("confirm_email.html", context)
+        
+    except Exception as e:
+        logger.error(f"Error confirming email: {str(e)}")
+        context["error_message"] = "An error occurred while confirming your email. Please try again."
+        return templates.TemplateResponse("confirm_email.html", context)
+
+
+@app.get("/resend-confirmation", response_class=HTMLResponse)
+async def resend_confirmation_page(
+    request: Request,
+    email: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Page to request a new confirmation email"""
+    # If user is already logged in and confirmed, redirect to dashboard
+    if current_user and current_user.email_confirmed == 1:
+        flash(request, "Your email is already confirmed.", "info")
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    
+    return templates.TemplateResponse(
+        "resend_confirmation.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "email": email,  # Pass the email to the template for pre-filling
+            "message": request.session.get("message", ""),
+            "message_type": request.session.get("message_type", "info")
+        }
+    )
+
+
+@app.post("/resend-confirmation", response_class=HTMLResponse)
+async def resend_confirmation_submit(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Handle resend confirmation form submission"""
+    # Check if user exists
+    user = db.query(User).filter(User.email == email).first()
+    
+    # Always show success to prevent email enumeration
+    if not user:
+        request.session["message"] = "If your email is registered, a confirmation link has been sent."
+        request.session["message_type"] = "success"
+        return RedirectResponse(url="/resend-confirmation", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Check if already confirmed
+    if user.email_confirmed == 1:
+        request.session["message"] = "Your email is already confirmed."
+        request.session["message_type"] = "info"
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    
+    try:
+        # Generate new confirmation token
+        from app.core.security import generate_reset_token, get_reset_token_expiry
+        confirmation_token = generate_reset_token()
+        confirmation_token_expires = get_reset_token_expiry()
+        
+        # Update user with new token
+        user.confirmation_token = confirmation_token
+        user.confirmation_token_expires = confirmation_token_expires
+        db.commit()
+        
+        # Send confirmation email in background
+        from app.services.email_sender import send_confirmation_email
+        background_tasks.add_task(
+            send_confirmation_email,
+            email=str(user.email),
+            token=confirmation_token
+        )
+        
+        request.session["message"] = "A new confirmation link has been sent to your email."
+        request.session["message_type"] = "success"
+        
+    except Exception as e:
+        logger.error(f"Error resending confirmation email: {str(e)}")
+        request.session["message"] = "An error occurred. Please try again later."
+        request.session["message_type"] = "danger"
+    
+    return RedirectResponse(url="/resend-confirmation", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # Startup and shutdown events

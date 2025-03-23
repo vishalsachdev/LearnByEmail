@@ -16,6 +16,7 @@ LearnByEmail is an educational email subscription service that delivers personal
 ## Features
 
 - User registration and authentication with JWT
+- Email confirmation system for new registrations
 - Topic-based educational content subscriptions
 - AI-generated content using Google's Gemini models (automatically selects best available model)
 - Scheduled email delivery at preferred times

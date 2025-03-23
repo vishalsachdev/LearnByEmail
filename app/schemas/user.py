@@ -35,6 +35,7 @@ class UserResetPassword(BaseModel):
 class UserResponse(UserBase):
     id: int
     created_at: datetime
+    email_confirmed: bool  # Will convert from 0/1 to boolean
 
     class Config:
         from_attributes = True
@@ -48,3 +49,13 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
     exp: int
+
+
+class UserConfirmationToken(BaseModel):
+    token: str
+    status: str = "success"
+    message: str = "Confirmation email sent"
+
+
+class UserConfirmEmail(BaseModel):
+    token: str

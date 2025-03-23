@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -15,8 +15,8 @@ from app.core.security import (
 )
 from app.db.session import get_db
 from app.db.models import User
-from app.schemas.user import Token, UserCreate, UserResponse, UserPasswordReset, UserResetToken, UserResetPassword
-from app.services.email_sender import send_password_reset_email
+from app.schemas.user import Token, UserCreate, UserResponse, UserPasswordReset, UserResetToken, UserResetPassword, UserConfirmationToken, UserConfirmEmail
+from app.services.email_sender import send_password_reset_email, send_confirmation_email
 from app.api.base_dependencies import verify_csrf_token
 from app.core.rate_limit import strict_rate_limit, standard_rate_limit
 
@@ -48,7 +48,9 @@ async def login_access_token(
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(verify_csrf_token), Depends(strict_rate_limit())])
 async def register_user(
-    user_in: UserCreate, db: Session = Depends(get_db)
+    user_in: UserCreate, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
 ) -> Any:
     """
     Register a new user
@@ -68,14 +70,29 @@ async def register_user(
             detail="Email already registered",
         )
     
-    # Create new user
+    # Generate confirmation token
+    confirmation_token = generate_reset_token()  # Reuse token generation function
+    confirmation_token_expires = get_reset_token_expiry()  # Reuse expiry function
+    
+    # Create new user with email confirmation fields
     user = User(
         email=user_in.email,
         password_hash=User.get_password_hash(user_in.password),
+        email_confirmed=0,  # Not confirmed yet
+        confirmation_token=confirmation_token,
+        confirmation_token_expires=confirmation_token_expires
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+    
+    # Send confirmation email in background
+    background_tasks.add_task(
+        send_confirmation_email,
+        email=str(user.email),
+        token=confirmation_token
+    )
+    
     return user
 
 
@@ -165,6 +182,92 @@ async def reset_password(
         "password_hash": new_password_hash,
         "reset_token": None,
         "reset_token_expires": None
+    })
+    db.commit()
+    db.refresh(user)
+    
+    return user
+
+
+@router.post("/send-confirmation", response_model=UserConfirmationToken, dependencies=[Depends(verify_csrf_token), Depends(strict_rate_limit())])
+async def send_confirmation(
+    user_data: UserPasswordReset,  # Reuse the email-only schema
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Resend confirmation email for a registered user
+    """
+    user = db.query(User).filter(User.email == user_data.email).first()
+    
+    # Always return success even if email not found (to prevent email enumeration)
+    if not user:
+        # Return a dummy token for non-existent users
+        dummy_token = generate_reset_token()
+        return {"token": dummy_token}
+    
+    # Check if already confirmed
+    if user.email_confirmed == 1:
+        return {"token": "already_confirmed", "status": "success", "message": "Email already confirmed"}
+    
+    # Generate and store confirmation token for the user
+    confirmation_token = generate_reset_token()
+    
+    # Update user data with SQLAlchemy updates for type safety
+    db.query(User).filter(User.id == user.id).update({
+        "confirmation_token": confirmation_token,
+        "confirmation_token_expires": get_reset_token_expiry()
+    })
+    db.commit()
+    
+    # Send confirmation email in background
+    background_tasks.add_task(
+        send_confirmation_email,
+        email=str(user.email),
+        token=confirmation_token
+    )
+    
+    return {"token": confirmation_token}
+
+
+@router.get("/confirm-email", response_model=UserResponse)
+async def confirm_email(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Confirm user email using token from URL query parameter
+    """
+    token = request.query_params.get("token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing confirmation token",
+        )
+    
+    # Find user by confirmation token
+    user = db.query(User).filter(
+        User.confirmation_token == token,
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid confirmation token",
+        )
+    
+    # Check if token is expired
+    if not user.confirmation_token_expires or user.confirmation_token_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Confirmation token expired",
+        )
+    
+    # Update user as confirmed and clear token
+    db.query(User).filter(User.id == user.id).update({
+        "email_confirmed": 1,  # Confirmed
+        "confirmation_token": None,
+        "confirmation_token_expires": None
     })
     db.commit()
     db.refresh(user)
