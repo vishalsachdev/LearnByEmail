@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./learnbyemail.db")
     
+    # GitHub Webhook
+    GITHUB_WEBHOOK_SECRET: str = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+    
     # CORS Origins
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 

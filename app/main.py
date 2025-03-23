@@ -15,7 +15,7 @@ import urllib.parse
 from app.core.config import settings
 from app.db.session import get_db, engine
 from app.db.models import Base, User, Subscription
-from app.api import auth, subscriptions, content_preview
+from app.api import auth, subscriptions, content_preview, webhooks
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
 from app.core.security import get_current_user_optional, authenticate_user, create_access_token, get_current_user
 from app.core.csrf import CSRFMiddleware, csrf_protect, get_csrf_token, CSRF_FORM_FIELD
@@ -191,6 +191,12 @@ app.include_router(
     content_preview.router,
     prefix=f"{settings.API_V1_STR}/preview",
     tags=["preview"],
+)
+
+app.include_router(
+    webhooks.router,
+    prefix="/webhooks",
+    tags=["webhooks"],
 )
 
 
