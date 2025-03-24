@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Check Your Email{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Email Confirmation Required</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-envelope fa-4x text-primary mb-3"></i>
+                        <h5>We've sent a confirmation email to <strong>{{ email }}</strong></h5>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <p>Please check your inbox and click the confirmation link to activate your account. If you don't see the email, please check your spam folder.</p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>What happens next?</h6>
+                        <ul>
+                            <li>Once you confirm your email, your account will be activated</li>
+                            <li>Any pending subscriptions will become active</li>
+                            <li>You'll be able to log in and manage your subscriptions</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <p>Didn't receive the email? <a href="/resend-confirmation?email={{ email }}">Send it again</a></p>
+                        <p class="mt-3"><a href="/" class="btn btn-outline-primary">Return to Home</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
