@@ -116,15 +116,32 @@ def remove_email_job(subscription_id: int):
 
 
 def init_scheduler_jobs():
-    """Initialize jobs for all existing subscriptions"""
+    """Initialize jobs for all existing subscriptions from confirmed users"""
     from sqlalchemy.orm import Session
     from app.db.session import SessionLocal
+    from app.db.models import User
     
     db = SessionLocal()
     try:
-        subscriptions = db.query(Subscription).all()
-        for subscription in subscriptions:
+        # Get all subscriptions
+        all_subscriptions = db.query(Subscription).all()
+        valid_subscriptions = []
+        
+        for subscription in all_subscriptions:
+            # Check confirmation status for all users (since user_id is not nullable)
+            user = db.query(User).filter(User.id == subscription.user_id).first()
+            if not user:
+                logger.error(f"User not found for subscription {subscription.id} with user_id {subscription.user_id}")
+                continue
+                
+            if user.email_confirmed != 1:
+                logger.info(f"Skipping job scheduling for subscription {subscription.id} from unconfirmed user {user.id}")
+                continue
+            
+            # Add job for confirmed users
             add_email_job(subscription)
-        logger.info(f"Initialized {len(subscriptions)} email jobs")
+            valid_subscriptions.append(subscription)
+        
+        logger.info(f"Initialized {len(valid_subscriptions)} email jobs out of {len(all_subscriptions)} total subscriptions")
     finally:
         db.close()

@@ -63,7 +63,7 @@ async def create_html_email(subject, content, to_email, email_type="educational"
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 h1 {{ font-size: 24px; margin-bottom: 20px; }}
                 p {{ margin: 15px 0; }}
-                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: white; 
+                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: #ffffff !important; 
                           text-decoration: none; border-radius: 4px; font-weight: bold; }}
                 .footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }}
             </style>
@@ -91,7 +91,7 @@ async def create_html_email(subject, content, to_email, email_type="educational"
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 h1 {{ font-size: 24px; margin-bottom: 20px; }}
                 p {{ margin: 15px 0; }}
-                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: white; 
+                .button {{ display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: #ffffff !important; 
                           text-decoration: none; border-radius: 4px; font-weight: bold; }}
                 .footer {{ margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }}
             </style>
@@ -211,7 +211,12 @@ async def send_via_smtp(to_email, subject, html_content):
             logger.error("No valid SMTP credentials available")
             return False
             
-        msg = await create_html_email(subject, html_content, to_email)
+        # Check if html_content is already a MIMEMultipart object
+        if isinstance(html_content, MIMEMultipart) or isinstance(html_content, MIMEText):
+            msg = html_content
+        else:
+            # Create a new email message
+            msg = await create_html_email(subject, html_content, to_email)
 
         logger.info(f"Attempting to send email via SMTP to {to_email}")
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -278,10 +283,19 @@ async def send_password_reset_email(email: str, token: str):
             if settings.GMAIL_USERNAME and settings.GMAIL_APP_PASSWORD:
                 email_provider_available = True
                 logger.info(f"Attempting to send password reset email via SMTP to {email}")
+                # Create HTML content for the password reset email
+                msg = await create_html_email(
+                    "Reset Your LearnByEmail Password",
+                    reset_url,
+                    email,
+                    email_type="reset_password"
+                )
+                
+                # Send email using SMTP
                 sent = await send_via_smtp(
                     email,
                     "Reset Your LearnByEmail Password",
-                    reset_url
+                    msg
                 )
                 
                 if sent:

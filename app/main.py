@@ -360,22 +360,65 @@ async def subscribe(
         # Check if user exists
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            # Create temporary user with random password
+            # Create new user with email confirmation
             import secrets
+            from app.core.security import generate_reset_token, get_reset_token_expiry
+            
+            # Generate confirmation token
+            confirmation_token = generate_reset_token()
+            confirmation_token_expires = get_reset_token_expiry()
+            
+            # Create temporary user with random password and email confirmation
             temp_password = secrets.token_urlsafe(12)
             user = User(
                 email=email,
-                password_hash=User.get_password_hash(temp_password)
+                password_hash=User.get_password_hash(temp_password),
+                email_confirmed=0,  # Not confirmed yet
+                confirmation_token=confirmation_token,
+                confirmation_token_expires=confirmation_token_expires
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+            
+            # Send confirmation email in background
+            from app.services.email_sender import send_confirmation_email
+            import asyncio
+            
+            # Create a background task to send the confirmation email
+            async def send_email_task():
+                await send_confirmation_email(email=str(user.email), token=confirmation_token)
+            
+            # Run the task in the background
+            asyncio.create_task(send_email_task())
+        elif not user.email_confirmed:
+            # User exists but hasn't confirmed email - check if they need a new confirmation token
+            from app.core.security import generate_reset_token, get_reset_token_expiry
+            import asyncio
+            from app.services.email_sender import send_confirmation_email
+            
+            # If token is expired or doesn't exist, generate a new one
+            if not user.confirmation_token or not user.confirmation_token_expires or user.confirmation_token_expires < datetime.utcnow():
+                confirmation_token = generate_reset_token()
+                confirmation_token_expires = get_reset_token_expiry()
+                
+                user.confirmation_token = confirmation_token
+                user.confirmation_token_expires = confirmation_token_expires
+                db.commit()
+                db.refresh(user)
+                
+                # Send a new confirmation email
+                async def send_email_task():
+                    await send_confirmation_email(email=str(user.email), token=confirmation_token)
+                
+                # Run the task in the background
+                asyncio.create_task(send_email_task())
         
         user_id = user.id
     else:
         user_id = current_user.id
     
-    # Check if subscription already exists
+    # Check if subscription already exists for this user
     existing = db.query(Subscription).filter(
         Subscription.email == email,
         Subscription.topic == topic,
@@ -391,6 +434,32 @@ async def subscribe(
                 "index.html", 
                 {"request": request, "current_user": current_user}
             )
+    
+    # Check if this email is subscribed to this topic under a different user account
+    other_user_subscription = db.query(Subscription).filter(
+        Subscription.email == email,
+        Subscription.topic == topic,
+        Subscription.user_id != user_id
+    ).first()
+    
+    if other_user_subscription:
+        # Get the user associated with this subscription
+        other_user = db.query(User).filter(User.id == other_user_subscription.user_id).first()
+        
+        if other_user:
+            flash(request, f"This email is already subscribed to {topic}. <a href='/login' class='alert-link'>Log in</a> to manage your subscriptions.", "warning")
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "current_user": current_user}
+            )
+    
+    # Get all topics this email is already subscribed to (for informational purposes)
+    existing_topics = db.query(Subscription.topic).filter(
+        Subscription.email == email
+    ).distinct().all()
+    
+    existing_topics = [t[0] for t in existing_topics if t[0] != topic]  # Exclude current topic
+    
     
     # Validate difficulty level
     if difficulty not in ["easy", "medium", "hard"]:
@@ -428,8 +497,64 @@ async def subscribe(
     if current_user:
         flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly.", "success")
     else:
-        # Enhanced message for non-logged in users with registration prompt
-        flash(request, f"Subscription to {topic} confirmed! You'll receive your first email shortly. <a href='/register?email={urllib.parse.quote(email)}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences.", "success")
+        # Check if this is an unconfirmed user subscribing to an additional topic
+        user_needs_confirmation = db.query(User).filter(User.email == email, User.email_confirmed == 0).first()
+        
+        if user_needs_confirmation:
+            # Message for users who still need to confirm their email
+            base_message = f"You need to confirm your email address before your subscriptions become active. We've sent a confirmation email to {email}."
+            
+            # Get all topics this user has subscribed to
+            all_topics = db.query(Subscription.topic).filter(
+                Subscription.email == email,
+                Subscription.user_id == user_needs_confirmation.id
+            ).all()
+            all_topics = [t[0] for t in all_topics]
+            
+            if len(all_topics) > 1:
+                topics_list = ", ".join(all_topics)
+                base_message += f" Once confirmed, you'll receive content for all your topics: {topics_list}."
+            
+            # Add registration link
+            base_message += f" <a href='/register?email={urllib.parse.quote(email)}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences."
+            
+            flash(request, base_message, "warning")
+        else:
+            # Check if this user already has a confirmed account
+            existing_user = db.query(User).filter(User.email == email, User.email_confirmed == 1).first()
+            
+            if existing_user:
+                # Message for users who already have an account but aren't logged in
+                base_message = f"Your subscription to {topic} has been added to your account."
+                
+                # Add information about existing subscriptions if any
+                if existing_topics:
+                    topics_list = ", ".join(existing_topics)
+                    if len(existing_topics) == 1:
+                        base_message += f" You're also subscribed to {topics_list}."
+                    else:
+                        base_message += f" You're also subscribed to these topics: {topics_list}."
+                
+                # Add login link instead of registration link
+                base_message += f" <a href='/login?email={urllib.parse.quote(email)}' class='alert-link'>Log in to your account</a> to manage your subscriptions and customize delivery preferences."
+                
+                flash(request, base_message, "success")
+            else:
+                # Standard message for new users
+                base_message = f"We've sent a confirmation email to {email}. Please confirm your email address to activate your subscription to {topic}."
+                
+                # Add information about existing subscriptions if any
+                if existing_topics:
+                    topics_list = ", ".join(existing_topics)
+                    if len(existing_topics) == 1:
+                        base_message += f" You're also subscribed to {topics_list}."
+                    else:
+                        base_message += f" You're also subscribed to these topics: {topics_list}."
+                
+                # Add registration link
+                base_message += f" <a href='/register?email={urllib.parse.quote(email)}' class='alert-link'>Create an account</a> to manage your subscriptions and customize delivery preferences."
+                
+                flash(request, base_message, "info")
     
     # Always redirect to dashboard if logged in, otherwise show index page
     if current_user:
@@ -477,7 +602,17 @@ async def login_submit(
     
     user_exists = db.query(User).filter(User.email == email).first()
     if user_exists and verify_password(password, str(user_exists.password_hash)) and not user_exists.email_confirmed:
-        flash(request, "Your email address has not been confirmed. Please check your inbox or request a new confirmation email.", "warning")
+        # Get subscription information for better messaging
+        subscriptions = db.query(Subscription).filter(Subscription.user_id == user_exists.id).all()
+        subscription_count = len(subscriptions)
+        
+        if subscription_count > 0:
+            topics = ", ".join([sub.topic for sub in subscriptions])
+            message = f"Your email address has not been confirmed. You have {subscription_count} pending subscription{'s' if subscription_count > 1 else ''} to {topics}. Please confirm your email to activate your account and subscriptions."
+        else:
+            message = "Your email address has not been confirmed. Please check your inbox or request a new confirmation email to activate your account."
+            
+        flash(request, message, "warning")
         return RedirectResponse(url=f"/resend-confirmation?email={email}", status_code=303)
     
     # Normal authentication flow
@@ -553,11 +688,40 @@ async def register_submit(
     # Check if user already exists
     user = db.query(User).filter(User.email == email).first()
     if user:
-        flash(request, "Email already registered", "danger")
-        return templates.TemplateResponse(
-            "register.html", 
-            {"request": request, "current_user": None}
-        )
+        # If user exists but hasn't confirmed their email, allow them to register
+        if not user.email_confirmed:
+            # Generate new confirmation token
+            from app.core.security import generate_reset_token, get_reset_token_expiry
+            confirmation_token = generate_reset_token()
+            confirmation_token_expires = get_reset_token_expiry()
+            
+            # Update user with new password and confirmation token
+            user.password_hash = User.get_password_hash(password)
+            user.confirmation_token = confirmation_token
+            user.confirmation_token_expires = confirmation_token_expires
+            db.commit()
+            
+            # Send confirmation email
+            from app.services.email_sender import send_confirmation_email
+            import asyncio
+            
+            async def send_email_task():
+                await send_confirmation_email(email=email, token=confirmation_token)
+            
+            asyncio.create_task(send_email_task())
+            
+            flash(request, "We've sent a new confirmation email to your address. Please check your inbox and confirm your email to complete registration.", "info")
+            return templates.TemplateResponse(
+                "check_email.html", 
+                {"request": request, "current_user": None, "email": email}
+            )
+        else:
+            # If user exists and has confirmed their email, show error
+            flash(request, "Email already registered. Please log in instead.", "danger")
+            return templates.TemplateResponse(
+                "register.html", 
+                {"request": request, "current_user": None}
+            )
     
     # Generate confirmation token
     from app.core.security import generate_reset_token, get_reset_token_expiry
@@ -1240,9 +1404,13 @@ async def resend_confirmation_submit(
     
     # Always show success to prevent email enumeration
     if not user:
-        request.session["message"] = "If your email is registered, a confirmation link has been sent."
-        request.session["message_type"] = "success"
-        return RedirectResponse(url="/resend-confirmation", status_code=status.HTTP_303_SEE_OTHER)
+        # Still show check_email template for consistency, even if user doesn't exist
+        # This prevents email enumeration while maintaining a consistent UX
+        flash(request, "If your email is registered, a confirmation link has been sent.", "info")
+        return templates.TemplateResponse(
+            "check_email.html", 
+            {"request": request, "current_user": current_user, "email": email}
+        )
     
     # Check if already confirmed
     if user.email_confirmed == 1:
@@ -1269,15 +1437,20 @@ async def resend_confirmation_submit(
             token=confirmation_token
         )
         
-        request.session["message"] = "A new confirmation link has been sent to your email."
-        request.session["message_type"] = "success"
+        # Success - redirect to check_email template instead of session messages
+        flash(request, "A new confirmation link has been sent to your email.", "success")
+        return templates.TemplateResponse(
+            "check_email.html", 
+            {"request": request, "current_user": current_user, "email": email}
+        )
         
     except Exception as e:
         logger.error(f"Error resending confirmation email: {str(e)}")
-        request.session["message"] = "An error occurred. Please try again later."
-        request.session["message_type"] = "danger"
-    
-    return RedirectResponse(url="/resend-confirmation", status_code=status.HTTP_303_SEE_OTHER)
+        flash(request, "An error occurred. Please try again later.", "danger")
+        return templates.TemplateResponse(
+            "resend_confirmation.html",
+            {"request": request, "current_user": current_user, "email": email}
+        )
 
 
 # Startup and shutdown events

@@ -16,6 +16,18 @@ This document tracks feature implementations, discussions, and future plans for 
    - Enhanced email sending service to support confirmation emails
    - Added comprehensive error handling and security measures
 
+2. **Subscription User Experience Improvements**
+   - Enhanced messaging for users with accounts who aren't logged in when subscribing to new topics
+   - Updated scheduler to skip scheduling jobs for subscriptions from users with unconfirmed emails
+   - Improved feedback messages to guide users to appropriate actions (login vs. registration)
+   - Fixed message display for users with existing accounts to avoid suggesting account creation
+
+3. **Email Template Enhancements**
+   - Fixed styling issues in password reset and confirmation email templates
+   - Improved button visibility with better color contrast
+   - Enhanced email sending service to properly handle HTML content
+   - Ensured consistent email formatting across different email providers (SendGrid and SMTP)
+
 
 
 ### 2025-03-14 (Evening Update)
