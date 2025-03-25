@@ -14,17 +14,18 @@ jobstores = {
     'default': SQLAlchemyJobStore(url='sqlite:///jobs.sqlite')
 }
 executors = {
-    'default': ThreadPoolExecutor(20)
+    'default': ThreadPoolExecutor(20),
+    'processpool': ProcessPoolExecutor(5)
 }
 job_defaults = {
     'coalesce': True,
-    'max_instances': 1,
-    'misfire_grace_time': 3600  # Allow misfired jobs up to 1 hour late
+    'max_instances': 3,
+    'misfire_grace_time': 24*3600  # Allow misfired jobs up to 24 hours late
 }
 
-# Use MemoryJobStore for development to avoid serialization issues
 scheduler = AsyncIOScheduler(
-    executors=executors,
+    jobstores=jobstores,
+    executors=executors, 
     job_defaults=job_defaults,
     timezone=pytz.UTC
 )
