@@ -304,7 +304,8 @@ async def contact_page(
     )
 
 
-@app.post("/subscribe", response_class=HTMLResponse, dependencies=[Depends(csrf_protect), Depends(standard_rate_limit())])
+@app.post("/subscribe", response_class=HTMLResponse, dependencies=[Depends(csrf_protect)])
+@standard_rate_limit()
 async def subscribe(
     request: Request,
     background_tasks: BackgroundTasks,
