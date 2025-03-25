@@ -14,42 +14,50 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 # Define rate limit error handler
-def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     """
     Custom handler for rate limit exceeded errors
-    Returns a 429 status code with a descriptive message
+    Returns a template response for HTML endpoints and JSON for API endpoints
     """
+    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.templating import Jinja2Templates
+    
     # Get client IP address
     client_ip = get_remote_address(request)
     
-    # Log comprehensive information about this rate limit hit
-    log_data = {
-        "event": "rate_limit_exceeded",
-        "ip": client_ip,
-        "path": request.url.path,
-        "method": request.method,
-        "timestamp": datetime.now().isoformat(),
-        "limit": str(exc.detail),
-        "user_agent": request.headers.get("user-agent", "unknown"),
-        "referer": request.headers.get("referer", "unknown"),
-    }
+    # Log the rate limit hit
+    logger.warning(f"Rate limit exceeded: IP={client_ip}, Path={request.url.path}")
     
-    # Get current user if authenticated
-    auth_header = request.cookies.get("access_token")
-    if auth_header:
-        log_data["authenticated"] = True
+    # Check if this is an HTML route (by Accept header or URL path)
+    accept_header = request.headers.get("accept", "")
+    is_html_route = ("text/html" in accept_header) or (request.url.path in ["/subscribe", "/login", "/register"])
+    
+    if is_html_route:
+        # For HTML routes, flash a message and redirect back
+        templates = Jinja2Templates(directory="app/templates")
+        
+        # Add flash message to session
+        if not hasattr(request, "session"):
+            request.session = {}
+        flash_messages = request.session.get("flash_messages", [])
+        flash_messages.append(("danger", "Too many requests. Please try again later."))
+        request.session["flash_messages"] = flash_messages
+        
+        # Return to previous page or home
+        referer = request.headers.get("referer")
+        redirect_url = referer if referer else "/"
+        
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(
+            url=redirect_url,
+            status_code=303
+        )
     else:
-        log_data["authenticated"] = False
-    
-    # Log as a warning
-    logger.warning(f"Rate limit exceeded: {log_data}")
-    
-    # For repeated offenders, we could implement more sophisticated blocking
-    
-    return HTTPException(
-        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        detail=f"Rate limit exceeded. Please try again later. Limit: {exc.detail}"
-    )
+        # For API routes, return JSON response
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Rate limit exceeded. Please try again later."}
+        )
 
 # Function to configure rate limiting in a FastAPI app
 def configure_rate_limiting(app):
