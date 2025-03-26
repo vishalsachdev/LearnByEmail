@@ -1,13 +1,12 @@
-from fastapi import FastAPI, Depends, Request, Response, Form, Cookie, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, Request, Response, Form, HTTPException, status, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import logging
-from typing import List, Tuple, Optional, Dict, Any, Union
+from typing import List, Optional
 from datetime import datetime, timedelta
-import asyncio
 from starlette.middleware.sessions import SessionMiddleware
 import re
 import urllib.parse
@@ -17,7 +16,7 @@ from app.db.session import get_db, engine
 from app.db.models import Base, User, Subscription
 from app.api import auth, subscriptions, content_preview, webhooks
 from app.services.scheduler import start_scheduler, init_scheduler_jobs
-from app.core.security import get_current_user_optional, authenticate_user, create_access_token, get_current_user
+from app.core.security import get_current_user_optional, create_access_token, get_current_user
 from app.core.csrf import CSRFMiddleware, csrf_protect, get_csrf_token, CSRF_FORM_FIELD
 from app.core.rate_limit import configure_rate_limiting, strict_rate_limit, standard_rate_limit
 
@@ -718,27 +717,27 @@ async def register_submit(
         user.confirmation_token_expires = confirmation_token_expires
         db.commit()
             
-            # Send confirmation email
-            from app.services.email_sender import send_confirmation_email
-            import asyncio
-            
-            async def send_email_task():
-                await send_confirmation_email(email=email, token=confirmation_token)
-            
-            asyncio.create_task(send_email_task())
-            
-            flash(request, "We've sent a new confirmation email to your address. Please check your inbox and confirm your email to complete registration.", "info")
-            return templates.TemplateResponse(
-                "check_email.html", 
-                {"request": request, "current_user": None, "email": email}
-            )
-        else:
-            # If user exists and has confirmed their email, show error
-            flash(request, "Email already registered. Please log in instead.", "danger")
-            return templates.TemplateResponse(
-                "register.html", 
-                {"request": request, "current_user": None}
-            )
+        # Send confirmation email
+        from app.services.email_sender import send_confirmation_email
+        import asyncio
+        
+        async def send_email_task():
+            await send_confirmation_email(email=email, token=confirmation_token)
+        
+        asyncio.create_task(send_email_task())
+        
+        flash(request, "We've sent a new confirmation email to your address. Please check your inbox and confirm your email to complete registration.", "info")
+        return templates.TemplateResponse(
+            "check_email.html", 
+            {"request": request, "current_user": None, "email": email}
+        )
+    else:
+        # If user exists and has confirmed their email, show error
+        flash(request, "Email already registered. Please log in instead.", "danger")
+        return templates.TemplateResponse(
+            "register.html", 
+            {"request": request, "current_user": None}
+        )
     
     # Generate confirmation token
     from app.core.security import generate_reset_token, get_reset_token_expiry
@@ -830,7 +829,6 @@ async def dashboard(
     subscriptions = db.query(Subscription).filter(Subscription.user_id == current_user.id).all()
     
     # Convert last_sent times from UTC to each subscription's timezone
-    from datetime import datetime
     import pytz
     
     for subscription in subscriptions:
@@ -1219,7 +1217,6 @@ async def test_email(
         logger.info(f"Attempting to send test email for subscription {subscription_id} to {subscription.email}")
         
         # Run task in background
-        from app.core.config import settings
         
         # Use background tasks to properly handle the async operation
         background_tasks.add_task(send_educational_email_task, int(subscription.id))
