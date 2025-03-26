@@ -1340,11 +1340,13 @@ async def confirm_email_page(
         "request": request,
         "current_user": current_user,
         "success": False,
-        "error_message": ""
+        "error_message": "",
+        "show_resend": False,
+        "email": None
     }
     
     if not token:
-        context["error_message"] = "Missing confirmation token"
+        context["error_message"] = "Missing confirmation token. Please check your confirmation email and try again."
         return templates.TemplateResponse("confirm_email.html", context)
     
     try:
@@ -1352,12 +1354,21 @@ async def confirm_email_page(
         user = db.query(User).filter(User.confirmation_token == token).first()
         
         if not user:
-            context["error_message"] = "Invalid confirmation token"
+            context["error_message"] = "Invalid or already used confirmation token. Please request a new confirmation email."
+            context["show_resend"] = True
+            return templates.TemplateResponse("confirm_email.html", context)
+        
+        context["email"] = user.email
+        
+        # Check if already confirmed
+        if user.email_confirmed:
+            context["error_message"] = "Email already confirmed. Please log in."
             return templates.TemplateResponse("confirm_email.html", context)
         
         # Check if token is expired
         if not user.confirmation_token_expires or user.confirmation_token_expires < datetime.utcnow():
             context["error_message"] = "Confirmation token has expired. Please request a new one."
+            context["show_resend"] = True
             return templates.TemplateResponse("confirm_email.html", context)
         
         # Mark user as confirmed
