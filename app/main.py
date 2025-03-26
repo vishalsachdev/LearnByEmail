@@ -360,20 +360,18 @@ async def subscribe(
         # Check if user exists
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            # Create new user with email confirmation
-            import secrets
+            # Create new user without password but with email confirmation
             from app.core.security import generate_reset_token, get_reset_token_expiry
             
             # Generate confirmation token
             confirmation_token = generate_reset_token()
             confirmation_token_expires = get_reset_token_expiry()
             
-            # Create temporary user with random password and email confirmation
-            temp_password = secrets.token_urlsafe(12)
+            # Create user without password
             user = User(
                 email=email,
-                password_hash=User.get_password_hash(temp_password),
-                email_confirmed=0,  # Not confirmed yet
+                password_hash="",  # Will be set during registration
+                email_confirmed=0,
                 confirmation_token=confirmation_token,
                 confirmation_token_expires=confirmation_token_expires
             )
@@ -615,14 +613,27 @@ async def login_submit(
         flash(request, message, "warning")
         return RedirectResponse(url=f"/resend-confirmation?email={email}", status_code=303)
     
-    # Normal authentication flow
-    user = authenticate_user(db, email, password)
+    # Check if user exists first
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         flash(request, "We couldn't find an account with those credentials. Please check your email and password or register for a new account.", "danger")
         return templates.TemplateResponse(
             "login.html", 
             {"request": request, "current_user": None}
         )
+
+    # Check if password is correct
+    if not user.verify_password(password):
+        flash(request, "Invalid password. Please try again.", "danger")
+        return templates.TemplateResponse(
+            "login.html", 
+            {"request": request, "current_user": None}
+        )
+
+    # Check if email is confirmed
+    if not user.email_confirmed:
+        flash(request, "Please confirm your email address before logging in.", "warning")
+        return RedirectResponse(url=f"/resend-confirmation?email={urllib.parse.quote(email)}", status_code=303)
     
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -688,18 +699,24 @@ async def register_submit(
     # Check if user already exists
     user = db.query(User).filter(User.email == email).first()
     if user:
-        # If user exists but hasn't confirmed their email, allow them to register
-        if not user.email_confirmed:
-            # Generate new confirmation token
-            from app.core.security import generate_reset_token, get_reset_token_expiry
-            confirmation_token = generate_reset_token()
-            confirmation_token_expires = get_reset_token_expiry()
+        if user.email_confirmed:
+            flash(request, "An account with this email already exists. Please log in instead.", "danger")
+            return RedirectResponse(url="/login", status_code=303)
+        
+        if user.password_hash:  # User has attempted registration before
+            flash(request, "Please check your email for the confirmation link or request a new one.", "info")
+            return RedirectResponse(url="/resend-confirmation?email=" + urllib.parse.quote(email), status_code=303)
             
-            # Update user with new password and confirmation token
-            user.password_hash = User.get_password_hash(password)
-            user.confirmation_token = confirmation_token
-            user.confirmation_token_expires = confirmation_token_expires
-            db.commit()
+        # Unconfirmed user without password (from subscription)
+        from app.core.security import generate_reset_token, get_reset_token_expiry
+        confirmation_token = generate_reset_token()
+        confirmation_token_expires = get_reset_token_expiry()
+        
+        # Update user with password and new confirmation token
+        user.password_hash = User.get_password_hash(password)
+        user.confirmation_token = confirmation_token
+        user.confirmation_token_expires = confirmation_token_expires
+        db.commit()
             
             # Send confirmation email
             from app.services.email_sender import send_confirmation_email
