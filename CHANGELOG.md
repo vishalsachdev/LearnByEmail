@@ -4,6 +4,22 @@ This document tracks feature implementations, discussions, and future plans for 
 
 ## Implemented Features
 
+### 2025-03-30
+
+1. **Scheduler Service Refactoring & Bug Fixes**
+    * Refactored `APSchedulerService` integration using FastAPI's dependency injection.
+    * Created a singleton scheduler service instance and provider (`get_scheduler_service`).
+    * Resolved `ImportError` by updating `app/main.py` and `app/api/subscriptions.py` to use the injected scheduler service.
+    * Corrected calls to use `schedule_email_job` and `remove_jobs_for_subscription` methods instead of non-existent functions.
+    * Added logging for scheduler operations in API and main app routes.
+
+2. **Application Startup Error Resolution**
+    * Fixed `ImportError` for `ACCESS_TOKEN_EXPIRE_MINUTES` in `app/main.py` by removing the unnecessary import.
+    * Fixed `ModuleNotFoundError` for `app.services.openai_service` by removing the incorrect import (project uses Gemini).
+    * Fixed `NameError` for `configure_rate_limiting` by adding the correct import in `app/main.py`.
+    * Fixed `NameError` for `init_scheduler_jobs` by removing the call to the non-existent function during startup (scheduler initialization deferred to Phase 3).
+    * Addressed `Address already in use` errors during development by ensuring previous server processes were stopped.
+
 ### 2025-03-23
 
 1. **Email Confirmation Feature**

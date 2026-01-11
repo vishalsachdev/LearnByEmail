@@ -13,12 +13,13 @@ import urllib.parse
 
 from app.core.config import settings
 from app.db.session import get_db, engine
-from app.db.models import Base, User, Subscription
+from app.db.models import Base, User, Subscription, EmailHistory
 from app.api import auth, subscriptions, content_preview, webhooks
-from app.services.scheduler import start_scheduler, init_scheduler_jobs
-from app.core.security import get_current_user_optional, create_access_token, get_current_user
+from app.services.scheduler import get_scheduler_service, APSchedulerService
+from app.core.security import get_current_user_optional, get_current_user, create_access_token, verify_password, get_password_hash
 from app.core.csrf import CSRFMiddleware, csrf_protect, get_csrf_token, CSRF_FORM_FIELD
-from app.core.rate_limit import configure_rate_limiting, strict_rate_limit, standard_rate_limit
+from app.core.rate_limit import standard_rate_limit, strict_rate_limit, configure_rate_limiting
+from app.services.email_sender import send_password_reset_email, send_confirmation_email
 
 # Setup logging
 import os
@@ -313,7 +314,8 @@ async def subscribe(
     timezone: str = Form(...),
     difficulty: str = Form(default="medium"),
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ):
     """Handle subscription form submission"""
     # Validate input
@@ -378,20 +380,13 @@ async def subscribe(
             db.commit()
             db.refresh(user)
             
-            # Send confirmation email in background
+            # Send confirmation email in background using FastAPI BackgroundTasks
             from app.services.email_sender import send_confirmation_email
-            import asyncio
-            
-            # Create a background task to send the confirmation email
-            async def send_email_task():
-                await send_confirmation_email(email=str(user.email), token=confirmation_token)
-            
-            # Run the task in the background
-            asyncio.create_task(send_email_task())
+            background_tasks.add_task(send_confirmation_email, email=str(user.email), token=confirmation_token)
+
         elif not user.email_confirmed:
             # User exists but hasn't confirmed email - check if they need a new confirmation token
             from app.core.security import generate_reset_token, get_reset_token_expiry
-            import asyncio
             from app.services.email_sender import send_confirmation_email
             
             # If token is expired or doesn't exist, generate a new one
@@ -404,12 +399,8 @@ async def subscribe(
                 db.commit()
                 db.refresh(user)
                 
-                # Send a new confirmation email
-                async def send_email_task():
-                    await send_confirmation_email(email=str(user.email), token=confirmation_token)
-                
-                # Run the task in the background
-                asyncio.create_task(send_email_task())
+                # Send a new confirmation email using FastAPI BackgroundTasks
+                background_tasks.add_task(send_confirmation_email, email=str(user.email), token=confirmation_token)
         
         user_id = user.id
     else:
@@ -477,14 +468,22 @@ async def subscribe(
     db.refresh(subscription)
     
     # Schedule email job
-    from app.services.scheduler import add_email_job
-    add_email_job(subscription)
+    try:
+        # Convert preferred_time back to string format HH:MM for the scheduler
+        time_str = subscription.preferred_time.strftime("%H:%M")
+        job_info = scheduler_service.schedule_email_job(
+            subscription_id=int(subscription.id),
+            delivery_time=time_str,
+            timezone=subscription.timezone
+        )
+        # TODO: Check job_info for success/failure
+        logger.info(f"Scheduled recurring email job for subscription {subscription.id}: {job_info}")
+    except Exception as e:
+        logger.error(f"Error scheduling recurring email job for subscription {subscription.id}: {str(e)}")
     
     # Send an immediate first email
     from app.services.email_sender import send_educational_email_task
     try:
-        # Use background_tasks to handle the asyncio coroutine properly
-        background_tasks = BackgroundTasks()
         background_tasks.add_task(send_educational_email_task, int(subscription.id))
         logger.info(f"Scheduled immediate welcome email for new subscription {subscription.id} to {email}")
     except Exception as e:
@@ -719,12 +718,8 @@ async def register_submit(
             
         # Send confirmation email
         from app.services.email_sender import send_confirmation_email
-        import asyncio
-        
-        async def send_email_task():
-            await send_confirmation_email(email=email, token=confirmation_token)
-        
-        asyncio.create_task(send_email_task())
+        background_tasks = BackgroundTasks()
+        background_tasks.add_task(send_confirmation_email, email=email, token=confirmation_token)
         
         flash(request, "We've sent a new confirmation email to your address. Please check your inbox and confirm your email to complete registration.", "info")
         return templates.TemplateResponse(
@@ -759,14 +754,8 @@ async def register_submit(
     
     # Send confirmation email in background
     from app.services.email_sender import send_confirmation_email
-    import asyncio
-    
-    # Create a background task to send the confirmation email
-    async def send_email_task():
-        await send_confirmation_email(email=str(new_user.email), token=confirmation_token)
-    
-    # Run the task in the background
-    asyncio.create_task(send_email_task())
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(send_confirmation_email, email=str(new_user.email), token=confirmation_token)
     
     flash(request, "Registration successful! Please check your email to confirm your account.", "success")
     return RedirectResponse(url="/login", status_code=303)
@@ -899,7 +888,8 @@ async def edit_subscription_submit(
     timezone: str = Form(None),
     difficulty: str = Form(None),
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ):
     """Handle edit subscription form submission"""
     if not current_user:
@@ -975,10 +965,23 @@ async def edit_subscription_submit(
     db.commit()
     
     # Update scheduler job
-    from app.services.scheduler import remove_email_job, add_email_job
-    remove_email_job(int(subscription.id))
-    add_email_job(subscription)
-    
+    try:
+        # Remove existing job first
+        remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+        logger.info(f"Removed existing job for subscription {subscription.id} before update: {remove_info}")
+        
+        # Convert preferred_time back to string format HH:MM for the scheduler
+        time_str = subscription.preferred_time.strftime("%H:%M")
+        job_info = scheduler_service.schedule_email_job(
+            subscription_id=int(subscription.id),
+            delivery_time=time_str,
+            timezone=subscription.timezone
+        )
+        logger.info(f"Rescheduled job for subscription {subscription.id}: {job_info}")
+        # TODO: Check job_info for success/failure
+    except Exception as e:
+        logger.error(f"Error rescheduling job for subscription {subscription.id}: {str(e)}")
+
     flash(request, "Subscription updated successfully", "success")
     return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -988,7 +991,8 @@ async def delete_subscription(
     request: Request,
     subscription_id: int,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ):
     """Delete subscription"""
     if not current_user:
@@ -1005,9 +1009,12 @@ async def delete_subscription(
         flash(request, "Subscription not found", "danger")
         return RedirectResponse(url="/dashboard", status_code=303)
     
-    # Remove scheduler job
-    from app.services.scheduler import remove_email_job
-    remove_email_job(int(subscription.id))
+    # Remove the email job first
+    try:
+        remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+        logger.info(f"Removed job for deleted subscription {subscription.id}: {remove_info}")
+    except Exception as e:
+        logger.error(f"Error removing email job for subscription {subscription.id}: {e}")
     
     try:
         # Delete email history records first to avoid foreign key constraint issues
@@ -1033,7 +1040,8 @@ async def delete_subscription(
 async def bulk_subscription_action(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ):
     """Handle bulk actions on subscriptions"""
     if not current_user:
@@ -1082,7 +1090,6 @@ async def bulk_subscription_action(
         return RedirectResponse(url="/dashboard", status_code=303)
     
     # Process based on action
-    from app.services.scheduler import remove_email_job, add_email_job
     count = len(subscriptions)
     
     if action == "delete":
@@ -1097,7 +1104,8 @@ async def bulk_subscription_action(
             
             for subscription in subscriptions:
                 # Remove scheduler job
-                remove_email_job(int(subscription.id))
+                remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+                logger.info(f"Removed job for deleted subscription {subscription.id}: {remove_info}")
                 
                 # Delete email history records for this subscription
                 db.query(EmailHistory).filter(EmailHistory.subscription_id == subscription.id).delete()
@@ -1136,7 +1144,8 @@ async def bulk_subscription_action(
             # Update subscriptions
             for subscription in subscriptions:
                 # Remove old job first
-                remove_email_job(int(subscription.id))
+                remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+                logger.info(f"Removed existing job for subscription {subscription.id} before update: {remove_info}")
                 
                 # Update time using a query to avoid type issues
                 db.query(Subscription).filter(Subscription.id == subscription.id).update(
@@ -1144,7 +1153,18 @@ async def bulk_subscription_action(
                 )
                 
                 # Add new job
-                add_email_job(subscription)
+                try:
+                    # Convert preferred_time back to string format HH:MM for the scheduler
+                    time_str = subscription.preferred_time.strftime("%H:%M")
+                    job_info = scheduler_service.schedule_email_job(
+                        subscription_id=int(subscription.id),
+                        delivery_time=time_str,
+                        timezone=subscription.timezone
+                    )
+                    logger.info(f"Rescheduled job for subscription {subscription.id}: {job_info}")
+                    # TODO: Check job_info for success/failure
+                except Exception as e:
+                    logger.error(f"Error rescheduling job for subscription {subscription.id}: {str(e)}")
             
             db.commit()
             flash(request, f"Successfully updated delivery time for {count} subscriptions", "success")
@@ -1168,7 +1188,8 @@ async def bulk_subscription_action(
         # Update subscriptions
         for subscription in subscriptions:
             # Remove old job first
-            remove_email_job(int(subscription.id))
+            remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+            logger.info(f"Removed existing job for subscription {subscription.id} before update: {remove_info}")
             
             # Update timezone
             db.query(Subscription).filter(Subscription.id == subscription.id).update(
@@ -1176,7 +1197,18 @@ async def bulk_subscription_action(
             )
             
             # Add new job
-            add_email_job(subscription)
+            try:
+                # Convert preferred_time back to string format HH:MM for the scheduler
+                time_str = subscription.preferred_time.strftime("%H:%M")
+                job_info = scheduler_service.schedule_email_job(
+                    subscription_id=int(subscription.id),
+                    delivery_time=time_str,
+                    timezone=subscription.timezone
+                )
+                logger.info(f"Rescheduled job for subscription {subscription.id}: {job_info}")
+                # TODO: Check job_info for success/failure
+            except Exception as e:
+                logger.error(f"Error rescheduling job for subscription {subscription.id}: {str(e)}")
         
         db.commit()
         flash(request, f"Successfully updated timezone for {count} subscriptions", "success")
@@ -1217,8 +1249,6 @@ async def test_email(
         logger.info(f"Attempting to send test email for subscription {subscription_id} to {subscription.email}")
         
         # Run task in background
-        
-        # Use background tasks to properly handle the async operation
         background_tasks.add_task(send_educational_email_task, int(subscription.id))
         flash(request, "Test email sending initiated. Check your inbox shortly!", "success")
     except Exception as e:
@@ -1495,8 +1525,8 @@ async def startup_event():
         if os.getenv("ENVIRONMENT", "development").lower() == "production":
             raise RuntimeError("CRITICAL: Cannot start in production without valid API_SECRET_KEY")
     
-    init_scheduler_jobs()
-    start_scheduler()
+    # TODO (Phase 3): Implement scheduler startup and job loading
+    logger.info("Application startup complete. Scheduler initialization pending Phase 3.")
 
 
 @app.on_event("shutdown")

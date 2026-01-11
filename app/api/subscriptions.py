@@ -3,6 +3,10 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime, time
+from typing import List, Optional
+import logging
 
 from app.core.security import get_current_user
 from app.db.session import get_db
@@ -13,10 +17,12 @@ from app.schemas.subscription import (
     SubscriptionUpdate,
     EmailHistoryResponse
 )
-from app.services.scheduler import add_email_job, remove_email_job
+from app.services.scheduler import get_scheduler_service, APSchedulerService
+from app.services.email_sender import send_educational_email_task
 from app.api.base_dependencies import verify_csrf_token
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=List[SubscriptionResponse])
@@ -45,6 +51,7 @@ async def create_subscription(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ) -> Any:
     """
     Create a new subscription
@@ -84,15 +91,21 @@ async def create_subscription(
     db.refresh(subscription)
     
     # Schedule the email job
-    add_email_job(subscription)
+    try:
+        # Convert preferred_time back to string format HH:MM for the scheduler
+        time_str = subscription.preferred_time.strftime("%H:%M")
+        job_info = scheduler_service.schedule_email_job(
+            subscription_id=int(subscription.id),
+            delivery_time=time_str,
+            timezone=subscription.timezone
+        )
+        logger.info(f"API: Scheduled recurring job for subscription {subscription.id}: {job_info}")
+    except Exception as e:
+        logger.error(f"API: Error scheduling recurring job for sub {subscription.id}: {str(e)}")
+        # Consider how to handle scheduling errors - potentially rollback or mark subscription as inactive?
+        pass 
     
     # Send an immediate first email
-    import asyncio
-    import logging
-    from app.services.email_sender import send_educational_email_task
-    
-    logger = logging.getLogger(__name__)
-    
     try:
         # Use background_tasks to send the welcome email asynchronously
         background_tasks.add_task(send_educational_email_task, int(subscription.id))
@@ -133,6 +146,7 @@ async def update_subscription(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ) -> Any:
     """
     Update a subscription
@@ -156,10 +170,28 @@ async def update_subscription(
     db.commit()
     db.refresh(subscription)
     
-    # Update the email job
-    remove_email_job(int(subscription.id))
-    add_email_job(subscription)
+    # Reschedule job with new settings if time or timezone changed
+    needs_reschedule = False
+    if 'preferred_time' in update_data or 'timezone' in update_data:
+        needs_reschedule = True
     
+    if needs_reschedule:
+        try:
+            # Remove existing job first
+            remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+            logger.info(f"API: Removed job for subscription {subscription.id} before update: {remove_info}")
+            
+            # Convert preferred_time back to string format HH:MM for the scheduler
+            time_str = subscription.preferred_time.strftime("%H:%M")
+            job_info = scheduler_service.schedule_email_job(
+                subscription_id=int(subscription.id),
+                delivery_time=time_str,
+                timezone=subscription.timezone
+            )
+            logger.info(f"API: Rescheduled job for subscription {subscription.id}: {job_info}")
+        except Exception as e:
+            logger.error(f"API: Error rescheduling job for sub {subscription.id}: {str(e)}")
+            
     return subscription
 
 
@@ -169,6 +201,7 @@ async def delete_subscription(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    scheduler_service: APSchedulerService = Depends(get_scheduler_service)
 ) -> None:
     """
     Delete a subscription
@@ -185,7 +218,11 @@ async def delete_subscription(
         )
     
     # Remove the email job first
-    remove_email_job(int(subscription.id))
+    try:
+        remove_info = scheduler_service.remove_jobs_for_subscription(subscription_id=int(subscription.id))
+        logger.info(f"API: Removed job for deleted subscription {subscription.id}: {remove_info}")
+    except Exception as e:
+        logger.error(f"API: Error removing job for deleted sub {subscription.id}: {str(e)}")
     
     # Delete the subscription
     db.delete(subscription)
