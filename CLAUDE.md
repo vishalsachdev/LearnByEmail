@@ -54,12 +54,6 @@
 - JWT issues: Ensure SECRET_KEY is properly set in .env
 - Dependencies issues: Ensure you're using the correct virtual environment (learnbyemail-venv) and run `pip install -r requirements.txt` if missing packages
 
-## Current Focus
-- [ ] [Update during /session-start]
-
-## Roadmap
-- [ ] [Add planned features]
-
 ## Session Log
 ### 2025-12-27
 - Initial roadmap sections added
